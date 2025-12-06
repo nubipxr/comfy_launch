@@ -38,20 +38,20 @@ EOF
 
 # Rounded box drawing with gradient
 rbox_top() {
-    echo -e "\e[38;5;33m╭$(printf '─%.0s' {1..84})\e[38;5;27m╮${N}"
+    echo -e "\e[38;5;39m<$(printf '─%.0s' {1..84})>${N}"
 }
 
 rbox_line() {
     local text="$1"
-    echo -e "\e[38;5;33m│${N} $text"
+    echo -e " $text"
 }
 
 rbox_bottom() {
-    echo -e "\e[38;5;27m╰$(printf '─%.0s' {1..84})\e[38;5;21m╯${N}"
+    echo -e "\e[38;5;39m<$(printf '─%.0s' {1..84})>${N}"
 }
 
 divider() {
-    echo -e "\e[38;5;27m$(printf '─%.0s' {1..86})\e[0m"
+    echo -e "\e[38;5;39m<$(printf '─%.0s' {1..86})>${N}"
 }
 # Animated ASCII header
 show_header() {
@@ -64,7 +64,7 @@ show_header() {
     sleep 0.05
           echo -e "${P}      |_____|_____|_|_|_|__|    |_|    |_____|__|__|_____|_|___|_____|__|__|${N}"
     sleep 0.05
-    echo -e "       \e[38;5;33mhttps://github.com/CLOUDWERX-DEV/comfy_launch\e[0m \e[38;5;21m»\e[38;5;39m https://cloudwerx.dev\e[0m"
+    echo -e "   \e[38;5;39m<───\e[0m \e[38;5;33mhttps://github.com/CLOUDWERX-DEV/comfy_launch\e[0m ${W}»${N} \e[38;5;39mhttps://cloudwerx.dev\e[0m \e[38;5;39m───>${N}"
     echo ""
 }
 
@@ -73,11 +73,21 @@ show_exit() {
     clear
     local colors=("$M" "$P" "$C" "$BC" "$BM" "$G")
     local art=(
-        "⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣠⣤⣤⣄⡀⠀⠀⠀⠀⠀⠀⣀⣀⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"
-        "⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⢞⡫⠄⠀⠀⠀⠉⠓⢦⡀⢀⣴⡿⠉⠀⠉⠉⠳⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"
-        "⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣠⣄⣀⠀⣼⢣⣎⠀⠀⠀⠀⠀⠀⠀⠀⢻⣟⣟⠔⠀⠀⠀⠀⠀⠀⢀⠹⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"
-        "⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⠿⢩⣄⡀⠈⠻⠇⡎⡎⡂⠀⠀⠀⠀⠀⠀⠀⢸⣐⣈⡀⠀⠀⠀⠀⠀⡄⡆⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"
-        "⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⡤⠶⣾⠀⠘⠉⣻⠄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡴⠏⢉⠈⢻⡄⠀⠀⠀⠀⠃⢇⡿⣟⠿⠳⣦⡀⠀⠀⠀⠀⠀⠀"
+        "⠀⠀⠀⠀          ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣠⣤⣤⣄⡀⠀⠀⠀⠀⠀⠀⣀⣀⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"
+        "⠀⠀⠀⠀         ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⢞⡫⠄⠀⠀⠀⠉⠓⢦⡀⢀⣴⡿⠉⠀⠉⠉⠳⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"
+        "⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀          ⠀⠀⠀⠀⠀⠀⠀⠀⣀⣠⣄⣀⠀⣼⢣⣎⠀⠀⠀⠀⠀⠀⠀⠀⢻⣟⣟⠔⠀⠀⠀⠀⠀⢀⠹⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"
+        "⠀⠀⠀⠀⠀⠀⠀⠀          ⠀  ⠀⠀⠀⠀⠀⠀⠀⠀⢠⠿⢩⣄⡀⠈⠻⠇⡎⡎⡂⠀⠀⠀⠀⠀⠀⠀⢸⣐⣈⡀⠀⠀⠀⠀⠀⡄⡆⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"
+        "⠀⠀⠀⠀⠀⠀⠀⠀          ⠀⠀⠀⠀⠀⠀⣠⡤⠶⣾⠀⠘⠉⣻⠄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡴⠏⢉⠈⢻⡄⠀⠀⠀⠀⠃⢇⡿⣟⠿⠳⣦⡀⠀⠀⠀⠀⠀⠀"
+        "⠀⠀⠀          ⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⡞⠉⠀⠀⠈⠳⠶⠶⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠸⠁⠀⢿⣤⡾⠁⠀⠀⠀⠀⠀⠀⠀⠁⠀⠀⠈⣧⠀⠀⠀⠀⠀⠀"
+        "⠀          ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⡟⠸⢠⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⡴⠷⠶⢤⡀⠀⠀⠀"
+        "          ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢷⡸⡙⠂⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣼⠋⢀⣀⡀⠀⠙⢧⡀⠀"
+        "⠀⠀          ⠀⠀⠀⠀⠀⠀⠀⢀⡴⠞⠛⠓⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣇⠀⠛⠉⣻⠀⠀⡌⣷⡀"
+        "⠀⠀          ⠀⠀⠀⠀⠀⠀⣰⡏⠁⢀⣤⣤⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⠶⠤⠶⠋⢠⢠⢃⡿⠁"
+        "⠀⠀          ⠀⠀⠀⠀⠀⠀⣿⢇⠀⣿⡀⠀⢹⡆⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⡴⠶⣶⡞⠁⠀"
+        "⠀⠀           ⠀⠀⠀⠀⠀⠀⠘⢯⣓⡀⠀⢀⣼⣱⡀⠀⠀⠀⠀⠀⠀⣰⠟⠁⢙⡧⠀⠀⠀⠀⢠⢀⠀⠀⠀⠀⢀⡞⠀⠀⠀⠀⠀⡀⡄⢀⠀⠀⠀⢺⣄⡀⠈⣗⠀⠀"
+        "⠀          ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠉⠉⠙⣧⠹⣌⠀⠀⠀⠀⠀⠀⢿⡀⠀⠈⠀⠀⠀⠀⣄⣞⣼⠁⠀⠀⠀⢸⡇⠀⠀⠀⡀⡴⣸⠿⣮⡓⠄⠀⠀⠀⢀⣼⠃⠀⠀"
+        "⠀⠀          ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⣤⣑⠂⠀⠀⢀⣠⠞⠷⣤⣀⠀⠀⢀⣈⣬⠞⠉⠳⠶⠴⠶⠛⠳⢤⣄⣈⣽⠶⠋⠀⠀⠙⠛⠒⠒⠚⠋⠀⠀⠀⠀"
+        "⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀          ⠀⠀⠀⠀⠈⠉⠙⠛⠛⠉⠁⠀⠀⠀⠉⠉⠉⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"
     )
     
     for i in "${!art[@]}"; do
@@ -99,9 +109,13 @@ show_exit() {
     sleep 0.05
     echo -e "${Y}!_____!!_____!!_____!!_____!!_____!!________!!_____!!__!__!!__!__!     !_____!!__!__!!_____!${N}"
     sleep 0.05
-    echo -e "${BC}                                                                        http://cloudwerx.dev${N}"
+    echo -e "\t\t\t\t\t\t\t\t        http://cloudwerx.dev${N}"
     echo ""
-    echo -e "${BG}                              👋 Thanks for using ComfyUI Launcher!${N}"
+    echo -e "${BG}                              👋 Thanks for using Comfy Launcher !${N}"
+    echo ""
+    echo ""
+    echo ""
+    echo ""
     echo ""
     sleep 0.5
 }
@@ -124,7 +138,7 @@ kill_server() {
         kill "$pid" 2>/dev/null && echo -e "${G}✓ Server stopped${N}" || echo -e "${R}✗ Failed${N}"
         sleep 1
     else
-        echo -e "${GR}No server running on port $port${N}"
+        echo -e "${R}No server running on port $port${N}"
     fi
 }
 
@@ -143,7 +157,10 @@ validate_setup() {
 update_comfyui() {
     cd "$COMFY_PATH/ComfyUI" || return 1
     echo -e "${Y}📦 Updating ComfyUI...${N}"
-    if git pull --ff-only 2>&1 | tee /tmp/comfy_update.log; then
+    local output=$(git pull --ff-only 2>&1 | tee /tmp/comfy_update.log)
+    if echo "$output" | grep -q "Already up to date"; then
+        echo -e "${G}✓ Already up to date${N}"
+    elif echo "$output" | grep -q "Updating"; then
         echo -e "${G}✓ ComfyUI updated${N}"
     else
         echo -e "${R}✗ Update failed - check /tmp/comfy_update.log${N}"
@@ -193,14 +210,14 @@ manage_custom_nodes() {
             local status_icon="${G}●${N}"
             local name_color="$Y"
             if $is_disabled; then
-                status_icon="${GR}○${N}"
+                status_icon="${R}○${N}"
                 name_color="$GR"
             fi
             
-            echo -e "${BC}$i.${N} $status_icon ${name_color}$display_name${N} ${GR}${version:+v$version}${N}"
+            echo -e "\e[38;5;39m$i.${N} $status_icon ${name_color}$display_name${N} ${GR}${version:+v$version}${N}"
             if [[ -n "$desc" ]]; then
                 while IFS= read -r line; do
-                    echo -e "     ${GR}$line${N}"
+                    echo -e "     \e[38;5;39m$line${N}"
                 done < <(echo "$desc" | fold -s -w 77)
             fi
             [[ -n "$repo_url" ]] && echo -e "     ${C}🔗 $repo_url${N}"
@@ -213,8 +230,8 @@ manage_custom_nodes() {
         echo -e "${Y}U.${N} ${W}Update ComfyUI${N}"
         echo -e "${R}0.${N} ${W}Back to Main Menu${N}"
         echo ""
-        echo -e "\e[38;5;27mEnter a Node number for options:${N}"
-        echo -ne "\e[38;5;33m➜\e[0m${N} ${W}Select option:${N} "
+        echo -e "\e[38;5;39mEnter a Node number for options:${N}"
+        echo -ne "\e[38;5;39m➜\e[0m${N} ${W}Select option:${N} "
         read -r choice
         
         case "$choice" in
@@ -408,6 +425,10 @@ launch_server() {
     local tunnel_type=""  # Track which tunnel was requested
     local server_url=""
     
+    # Clear screen before showing logs
+    sleep 1
+    clear
+    
     # Draw fixed footer at bottom
     draw_footer() {
         local rows=$(tput lines)
@@ -423,18 +444,18 @@ launch_server() {
         
         # Draw tunnel section if active or waiting
         if [[ -n "$tunnel_url" ]]; then
-            echo -e "\e[38;5;33m╭─[\e[0m \e[38;5;39m☁️  $tunnel_label\e[38;5;33m ]────────────────────────────────────────────────────────╴\e[0m"
+            echo -e "\e[38;5;33m╭─[\e[0m \e[38;5;39m☁️  $tunnel_label\e[38;5;33m ]──────────────────────────────────────────────────────────>${N}"
             echo -e "\e[38;5;33m│\e[0m ${Y}$tunnel_url${N}"
-            echo -e "\e[38;5;27m├────────────────────────────────────────────────────────────────────────────────────╴\e[0m"
-            echo -e "\e[38;5;27m│\e[0m \e[38;5;33mT\e[0m=Tunnel \e[38;5;33mP\e[0m=Pinggy ${Y}K${N}=Kill ${G}S${N}=Save \e[38;5;27mM\e[0m=Menu \e[38;5;21mE\e[0m=Exit \e[38;5;240m| PID: ${R}$pid${N}"
+            echo -e "\e[38;5;27m├────────────────────────────────────────────────────────────────────────────────────>${N}"
+            echo -e "\e[38;5;27m│\e[0m \e[38;5;33mT\e[0m=Tunnel \e[38;5;33mP\e[0m=Pinggy ${Y}K${N}=Kill ${G}S${N}=Save \e[38;5;27mM\e[0m=Menu ${M}E${N}=Exit \e[38;5;240m| PID: ${R}$pid${N}"
         elif [[ -n "$tunnel_status" ]]; then
-            echo -e "\e[38;5;33m╭─[\e[0m \e[38;5;39m☁️  $tunnel_label\e[38;5;33m ]────────────────────────────────────────────────────────╴\e[0m"
+            echo -e "\e[38;5;33m╭─[\e[0m \e[38;5;39m☁️  $tunnel_label\e[38;5;33m ]──────────────────────────────────────────────────────────>${N}"
             echo -e "\e[38;5;33m│\e[0m ${Y}$tunnel_status${N}"
-            echo -e "\e[38;5;27m├────────────────────────────────────────────────────────────────────────────────────╴\e[0m"
-            echo -e "\e[38;5;27m│\e[0m \e[38;5;33mT\e[0m=Tunnel \e[38;5;33mP\e[0m=Pinggy ${Y}K${N}=Kill ${G}S${N}=Save \e[38;5;27mM\e[0m=Menu \e[38;5;21mE\e[0m=Exit \e[38;5;240m| PID: ${R}$pid${N}"
+            echo -e "\e[38;5;27m├────────────────────────────────────────────────────────────────────────────────────>${N}"
+            echo -e "\e[38;5;27m│\e[0m \e[38;5;33mT\e[0m=Tunnel \e[38;5;33mP\e[0m=Pinggy ${Y}K${N}=Kill ${G}S${N}=Save \e[38;5;27mM\e[0m=Menu ${M}E${N}=Exit \e[38;5;240m| PID: ${R}$pid${N}"
         else
-            echo -e "\e[38;5;33m╭────────────────────────────────────────────────────────────────────────────────────╴\e[0m"
-            echo -e "\e[38;5;27m│\e[0m \e[38;5;33mT\e[0m=Tunnel \e[38;5;33mP\e[0m=Pinggy ${Y}K${N}=Kill ${G}S${N}=Save \e[38;5;27mM\e[0m=Menu \e[38;5;21mE\e[0m=Exit \e[38;5;240m| PID: ${R}$pid${N}"
+            echo -e "\e[38;5;33m╭────────────────────────────────────────────────────────────────────────────────────>${N}"
+            echo -e "\e[38;5;27m│\e[0m \e[38;5;33mT\e[0m=Tunnel \e[38;5;33mP\e[0m=Pinggy ${Y}K${N}=Kill ${G}S${N}=Save \e[38;5;27mM\e[0m=Menu ${M}E${N}=Exit \e[38;5;240m| PID: ${R}$pid${N}"
         fi
     }
     
@@ -682,6 +703,7 @@ launch_server() {
 }
 
 tunnel_cloudflare() {
+    local port=$(get_port_from_args)
     if ! command -v cloudflared &>/dev/null; then
         echo -e "${Y}⚠ cloudflared not installed${N}"
         echo -e "${W}Installing cloudflared...${N}\n"
@@ -710,15 +732,16 @@ tunnel_cloudflare() {
     fi
     
     echo -e "${M}☁️  Starting Cloudflare tunnel...${N}\n"
-    cloudflared tunnel --url "http://localhost:$SERVER_PORT" 2>&1 | while IFS= read -r line; do
+    cloudflared tunnel --url "http://localhost:$port" 2>&1 | while IFS= read -r line; do
         [[ "$line" =~ trycloudflare\.com ]] && echo -e "${BG}🌐 ${W}$line${N}" || echo -e "${GR}$line${N}"
     done
 }
 
 tunnel_pinggy() {
+    local port=$(get_port_from_args)
     command -v ssh &>/dev/null || { echo -e "${R}✗ SSH required${N}"; return 1; }
     echo -e "${C}🌐 Starting Pinggy tunnel (60min free)...${N}\n"
-    echo "yes" | ssh -p 443 -R0:localhost:$SERVER_PORT qr@free.pinggy.io
+    echo "yes" | ssh -p 443 -R0:localhost:$port qr@free.pinggy.io
 }
 
 open_folder() {
@@ -733,16 +756,24 @@ open_folder() {
 }
 
 set_path() {
-    echo -e "${C}Enter ComfyUI root path (containing ComfyUI/ folder):${N}"
-    echo -e "${GR}Example: /home/user/Desktop/Servers/comfy${N}"
+    echo -e "\e[38;5;39mEnter ComfyUI root path (containing ComfyUI/ folder):${N}"
+    echo -e "${Y}Example: /home/user/Desktop/Servers/comfy${N}"
     read -r new_path
-    [[ -n "$new_path" ]] && COMFY_PATH=$(realpath "$new_path" 2>/dev/null || echo "$new_path") && save_config
+    if [[ -n "$new_path" ]]; then
+        new_path=$(realpath "$new_path" 2>/dev/null || echo "$new_path")
+        # If user selected the ComfyUI folder itself, go up one level
+        if [[ "$(basename "$new_path")" == "ComfyUI" ]]; then
+            new_path=$(dirname "$new_path")
+        fi
+        COMFY_PATH="$new_path"
+        save_config
+    fi
 }
 
 set_venv() {
     echo -e "${C}Enter venv path:${N}"
-    echo -e "${GR}Example: /home/user/Desktop/Servers/comfy/venv${N}"
-    echo -e "${GR}Leave empty to use default (COMFY_PATH/venv)${N}"
+    echo -e "${Y}Example: /home/user/Desktop/Servers/comfy/venv${N}"
+    echo -e "\e[38;5;39mLeave empty to use default (COMFY_PATH/venv)${N}"
     read -r new_venv
     VENV_PATH="$new_venv"
     save_config
@@ -754,65 +785,65 @@ edit_launch_args() {
     show_header
     echo -e "${W}LAUNCH ARGUMENTS EDITOR${N}"
     divider
-    echo -e "${W}Current:${N} ${C}$LAUNCH_ARGS${N}\n"
+    echo -e "${W}Current:${N} \e[38;5;39m$LAUNCH_ARGS${N}\n"
     
     echo -e "${BG}NETWORK${N}"
-    echo -e "  ${C}--listen 0.0.0.0${N}              ${GR}Listen on all interfaces (default: 127.0.0.1)${N}"
-    echo -e "  ${C}--port 8188${N}                   ${GR}Set port number (default: 8188)${N}"
-    echo -e "  ${C}--enable-cors-header${N}          ${GR}Enable CORS${N}"
+    echo -e "  \e[38;5;39m--listen 0.0.0.0${N}              ${GR}Listen on all interfaces (default: 127.0.0.1)${N}"
+    echo -e "  \e[38;5;39m--port 8188${N}                   ${GR}Set port number (default: 8188)${N}"
+    echo -e "  \e[38;5;39m--enable-cors-header${N}          ${GR}Enable CORS${N}"
     
     echo -e "\n${BG}VRAM MODES${N} ${GR}(mutually exclusive)${N}"
-    echo -e "  ${C}--gpu-only${N}                    ${GR}Keep everything on GPU${N}"
-    echo -e "  ${C}--highvram${N}                    ${GR}Keep models in GPU (24GB+)${N}"
-    echo -e "  ${C}--normalvram${N}                  ${GR}Normal VRAM usage (8-16GB)${N}"
-    echo -e "  ${C}--lowvram${N}                     ${GR}Split unet for less VRAM (4-6GB)${N}"
-    echo -e "  ${C}--novram${N}                      ${GR}Minimal VRAM mode${N}"
-    echo -e "  ${C}--cpu${N}                         ${GR}CPU only (slow)${N}"
+    echo -e "  \e[38;5;39m--gpu-only${N}                    ${GR}Keep everything on GPU${N}"
+    echo -e "  \e[38;5;39m--highvram${N}                    ${GR}Keep models in GPU (24GB+)${N}"
+    echo -e "  \e[38;5;39m--normalvram${N}                  ${GR}Normal VRAM usage (8-16GB)${N}"
+    echo -e "  \e[38;5;39m--lowvram${N}                     ${GR}Split unet for less VRAM (4-6GB)${N}"
+    echo -e "  \e[38;5;39m--novram${N}                      ${GR}Minimal VRAM mode${N}"
+    echo -e "  \e[38;5;39m--cpu${N}                         ${GR}CPU only (slow)${N}"
     
     echo -e "\n${BG}ATTENTION${N} ${GR}(mutually exclusive)${N}"
-    echo -e "  ${C}--use-split-cross-attention${N}   ${GR}Split cross attention${N}"
-    echo -e "  ${C}--use-quad-cross-attention${N}    ${GR}Sub-quadratic attention (recommended)${N}"
-    echo -e "  ${C}--use-pytorch-cross-attention${N} ${GR}PyTorch 2.0 attention${N}"
-    echo -e "  ${C}--use-sage-attention${N}          ${GR}Sage attention${N}"
-    echo -e "  ${C}--use-flash-attention${N}         ${GR}Flash attention${N}"
+    echo -e "  \e[38;5;39m--use-split-cross-attention${N}   ${GR}Split cross attention${N}"
+    echo -e "  \e[38;5;39m--use-quad-cross-attention${N}    ${GR}Sub-quadratic attention (recommended)${N}"
+    echo -e "  \e[38;5;39m--use-pytorch-cross-attention${N} ${GR}PyTorch 2.0 attention${N}"
+    echo -e "  \e[38;5;39m--use-sage-attention${N}          ${GR}Sage attention${N}"
+    echo -e "  \e[38;5;39m--use-flash-attention${N}         ${GR}Flash attention${N}"
     
     echo -e "\n${BG}PRECISION - UNET${N} ${GR}(mutually exclusive)${N}"
-    echo -e "  ${C}--fp16-unet${N}                   ${GR}FP16 diffusion model${N}"
-    echo -e "  ${C}--bf16-unet${N}                   ${GR}BF16 diffusion model${N}"
-    echo -e "  ${C}--fp8_e4m3fn-unet${N}             ${GR}FP8 E4M3FN weights${N}"
-    echo -e "  ${C}--fp8_e5m2-unet${N}               ${GR}FP8 E5M2 weights${N}"
+    echo -e "  \e[38;5;39m--fp16-unet${N}                   ${GR}FP16 diffusion model${N}"
+    echo -e "  \e[38;5;39m--bf16-unet${N}                   ${GR}BF16 diffusion model${N}"
+    echo -e "  \e[38;5;39m--fp8_e4m3fn-unet${N}             ${GR}FP8 E4M3FN weights${N}"
+    echo -e "  \e[38;5;39m--fp8_e5m2-unet${N}               ${GR}FP8 E5M2 weights${N}"
     
     echo -e "\n${BG}PRECISION - VAE${N} ${GR}(mutually exclusive)${N}"
-    echo -e "  ${C}--fp16-vae${N}                    ${GR}FP16 VAE (faster, may cause black images)${N}"
-    echo -e "  ${C}--fp32-vae${N}                    ${GR}FP32 VAE (full precision)${N}"
-    echo -e "  ${C}--bf16-vae${N}                    ${GR}BF16 VAE${N}"
-    echo -e "  ${C}--cpu-vae${N}                     ${GR}Run VAE on CPU${N}"
+    echo -e "  \e[38;5;39m--fp16-vae${N}                    ${GR}FP16 VAE (faster, may cause black images)${N}"
+    echo -e "  \e[38;5;39m--fp32-vae${N}                    ${GR}FP32 VAE (full precision)${N}"
+    echo -e "  \e[38;5;39m--bf16-vae${N}                    ${GR}BF16 VAE${N}"
+    echo -e "  \e[38;5;39m--cpu-vae${N}                     ${GR}Run VAE on CPU${N}"
     
     echo -e "\n${BG}PRECISION - TEXT ENCODER${N} ${GR}(mutually exclusive)${N}"
-    echo -e "  ${C}--fp8_e4m3fn-text-enc${N}         ${GR}FP8 E4M3FN text encoder${N}"
-    echo -e "  ${C}--fp8_e5m2-text-enc${N}           ${GR}FP8 E5M2 text encoder${N}"
-    echo -e "  ${C}--fp16-text-enc${N}               ${GR}FP16 text encoder${N}"
+    echo -e "  \e[38;5;39m--fp8_e4m3fn-text-enc${N}         ${GR}FP8 E4M3FN text encoder${N}"
+    echo -e "  \e[38;5;39m--fp8_e5m2-text-enc${N}           ${GR}FP8 E5M2 text encoder${N}"
+    echo -e "  \e[38;5;39m--fp16-text-enc${N}               ${GR}FP16 text encoder${N}"
     
     echo -e "\n${BG}MEMORY${N}"
-    echo -e "  ${C}--cuda-malloc${N}                 ${GR}Enable cudaMallocAsync${N}"
-    echo -e "  ${C}--disable-smart-memory${N}        ${GR}Aggressive RAM offload${N}"
-    echo -e "  ${C}--reserve-vram 2${N}              ${GR}Reserve VRAM in GB for OS${N}"
+    echo -e "  \e[38;5;39m--cuda-malloc${N}                 ${GR}Enable cudaMallocAsync${N}"
+    echo -e "  \e[38;5;39m--disable-smart-memory${N}        ${GR}Aggressive RAM offload${N}"
+    echo -e "  \e[38;5;39m--reserve-vram 2${N}              ${GR}Reserve VRAM in GB for OS${N}"
     
     echo -e "\n${BG}CACHE${N} ${GR}(mutually exclusive)${N}"
-    echo -e "  ${C}--cache-classic${N}               ${GR}Aggressive caching${N}"
-    echo -e "  ${C}--cache-lru 10${N}                ${GR}LRU cache (N results)${N}"
+    echo -e "  \e[38;5;39m--cache-classic${N}               ${GR}Aggressive caching${N}"
+    echo -e "  \e[38;5;39m--cache-lru 10${N}                ${GR}LRU cache (N results)${N}"
     
     echo -e "\n${BG}PREVIEW${N}"
-    echo -e "  ${C}--preview-method auto${N}         ${GR}auto/latent2rgb/taesd/none${N}"
+    echo -e "  \e[38;5;39m--preview-method auto${N}         ${GR}auto/latent2rgb/taesd/none${N}"
     
     echo -e "\n${BG}OTHER${N}"
-    echo -e "  ${C}--auto-launch${N}                 ${GR}Open browser automatically${N}"
-    echo -e "  ${C}--multi-user${N}                  ${GR}Enable per-user storage${N}"
-    echo -e "  ${C}--verbose DEBUG${N}               ${GR}Logging level${N}"
+    echo -e "  \e[38;5;39m--auto-launch${N}                 ${GR}Open browser automatically${N}"
+    echo -e "  \e[38;5;39m--multi-user${N}                  ${GR}Enable per-user storage${N}"
+    echo -e "  \e[38;5;39m--verbose DEBUG${N}               ${GR}Logging level${N}"
     
     echo -e "\n${Y}Format:${N} ${GR}Separate with spaces${N}"
-    echo -e "${Y}Example:${N} ${C}--listen 0.0.0.0 --port 6057 --highvram --fp16-vae${N}\n"
-    echo -e "${C}Enter new args (or Enter to keep):${N}"
+    echo -e "${Y}Example:${N} \e[38;5;39m--listen 0.0.0.0 --port 6057 --highvram --fp16-vae${N}\n"
+    echo -e "\e[38;5;39mEnter new args (or Enter to keep):${N}"
     read -e -i "$LAUNCH_ARGS" new_args
     [[ -n "$new_args" ]] && LAUNCH_ARGS="$new_args" && save_config && echo -e "${G}✓ Updated${N}"
     sleep 2
@@ -826,36 +857,36 @@ show_help() {
     divider
     echo ""
     echo -e "${W}USAGE:${N}"
-    echo -e "  ${C}comfy_launch.sh${N}                ${GR}Interactive menu${N}"
-    echo -e "  ${C}comfy_launch.sh start${N}          ${GR}Start server${N}"
-    echo -e "  ${C}comfy_launch.sh update${N}         ${GR}Update ComfyUI${N}"
-    echo -e "  ${C}comfy_launch.sh kill${N}           ${GR}Kill server${N}"
-    echo -e "  ${C}comfy_launch.sh nodes${N}          ${GR}Manage custom nodes${N}"
-    echo -e "  ${C}comfy_launch.sh update-nodes${N}   ${GR}Update all nodes${N}"
-    echo -e "  ${C}comfy_launch.sh tunnel cf${N}      ${GR}Cloudflare tunnel${N}"
-    echo -e "  ${C}comfy_launch.sh tunnel pinggy${N}  ${GR}Pinggy tunnel${N}"
-    echo -e "  ${C}comfy_launch.sh path /dir${N}      ${GR}Set ComfyUI path${N}"
-    echo -e "  ${C}comfy_launch.sh venv /dir${N}      ${GR}Set venv path${N}"
-    echo -e "  ${C}comfy_launch.sh folder${N}         ${GR}Open folder${N}"
+    echo -e "  \e[38;5;39mcomfy_launch.sh${N}                ${GR}Interactive menu${N}"
+    echo -e "  \e[38;5;39mcomfy_launch.sh start${N}          ${GR}Start server${N}"
+    echo -e "  \e[38;5;39mcomfy_launch.sh update${N}         ${GR}Update ComfyUI${N}"
+    echo -e "  \e[38;5;39mcomfy_launch.sh kill${N}           ${GR}Kill server${N}"
+    echo -e "  \e[38;5;39mcomfy_launch.sh nodes${N}          ${GR}Manage custom nodes${N}"
+    echo -e "  \e[38;5;39mcomfy_launch.sh update-nodes${N}   ${GR}Update all nodes${N}"
+    echo -e "  \e[38;5;39mcomfy_launch.sh tunnel cf${N}      ${GR}Cloudflare tunnel${N}"
+    echo -e "  \e[38;5;39mcomfy_launch.sh tunnel pinggy${N}  ${GR}Pinggy tunnel${N}"
+    echo -e "  \e[38;5;39mcomfy_launch.sh path /dir${N}      ${GR}Set ComfyUI path${N}"
+    echo -e "  \e[38;5;39mcomfy_launch.sh venv /dir${N}      ${GR}Set venv path${N}"
+    echo -e "  \e[38;5;39mcomfy_launch.sh folder${N}         ${GR}Open folder${N}"
     echo ""
     echo -e "${W}LINKS:${N}"
-    echo -e "  ${BC}🏠 https://cloudwerx.dev${N}                              ${GR}Homepage & Blog${N}"
-    echo -e "  ${BC}📖 https://comfyanonymous.github.io/ComfyUI_examples/${N}  ${GR}Official Examples & Workflows${N}"
-    echo -e "  ${BC}📚 https://docs.comfy.org${N}                             ${GR}Official Documentation${N}"
-    echo -e "  ${P}🐙 https://github.com/comfyanonymous/ComfyUI${N}          ${GR}ComfyUI Source Code${N}"
-    echo -e "  ${P}💻 https://github.com/CLOUDWERX-DEV/comfy_launch${N}      ${GR}This Script (Report Issues)${N}"
-    echo -e "  ${Y}🤗 https://huggingface.co/Comfy-Org${N}                   ${GR}Official Models & Resources${N}"
-    echo -e "  ${G}🎨 https://civitai.com${N}                                ${GR}Community Models & LoRAs${N}"
+    echo -e "  \e[38;5;39m🏠 https://cloudwerx.dev${N}                              ${GR}Homepage & Blog${N}"
+    echo -e "  \e[38;5;39m📖 https://comfyanonymous.github.io/ComfyUI_examples/${N} ${GR}Official Examples & Workflows${N}"
+    echo -e "  \e[38;5;39m📚 https://docs.comfy.org${N}                             ${GR}Official Documentation${N}"
+    echo -e "  \e[38;5;39m🐙 https://github.com/comfyanonymous/ComfyUI${N}          ${GR}ComfyUI Source Code${N}"
+    echo -e "  \e[38;5;39m💻 https://github.com/CLOUDWERX-DEV/comfy_launch${N}      ${GR}This Script (Report Issues)${N}"
+    echo -e "  \e[38;5;39m🤗 https://huggingface.co/Comfy-Org${N}                   ${GR}Official Models & Resources${N}"
+    echo -e "  \e[38;5;39m🎨 https://civitai.com${N}                                ${GR}Community Models & LoRAs${N}"
     echo ""
     echo -e "${W}SUPPORT:${N}"
-    echo -e "  ${M}☕ https://buymeacoffee.com/cloudwerxl3${N}               ${GR}Buy Me A Coffee (Donate)${N}"
-    echo -e "  ${BC}💬 https://discord.gg/EQSBU5aK${N}                        ${GR}Discord Server (Help & Chat)${N}"
-    echo -e "  ${C}📧 mail@cloudwerx.dev${N}                                ${GR}Email Contact${N}"
+    echo -e "  \e[38;5;39m☕ https://buymeacoffee.com/cloudwerxl3${N}               ${GR}Buy Me A Coffee (Donate)${N}"
+    echo -e "  \e[38;5;39m💬 https://discord.gg/EQSBU5aK${N}                        ${GR}Discord Server (Help & Chat)${N}"
+    echo -e "  \e[38;5;39m📧 mail@cloudwerx.dev${N}                                 ${GR}Email Contact${N}"
     echo ""
     echo -e "${W}TROUBLESHOOTING:${N}"
-    echo -e "  ${R}✗${N} Port busy? ${G}comfy_launch.sh kill${N}"
-    echo -e "  ${R}✗${N} No venv? ${C}cd ComfyUI && python -m venv venv${N}"
-    echo -e "  ${R}✗${N} Path issues? Set root folder containing ComfyUI/, not ComfyUI/ itself"
+    echo -e "  ${R}✗${N} Port busy? \e[38;5;39mcomfy_launch.sh kill${N}"
+    echo -e "  ${R}✗${N} No venv? \e[38;5;39mcd ComfyUI && python -m venv venv${N}"
+    echo -e "  ${R}✗${N} Path issues? ${Y}Set root folder containing ComfyUI/, not ComfyUI/ itself${N}"
     echo ""
     read -p "Press Enter to continue..."
 }
@@ -865,35 +896,42 @@ show_menu() {
     load_config
     
     rbox_top
+    
+    # Path with wrapping
+    echo -e " ${B}📁${N} \e[38;5;39mPath:${N}"
     if [[ -z "$COMFY_PATH" ]] || ! validate_setup; then
-        rbox_line "${R}⚠  NO VALID COMFYUI PATH DETECTED${N}"
+        echo -e "   ${R}⚠  NO VALID COMFYUI PATH DETECTED${N}"
     else
-        local status="${R}⏹ STOPPED${N}"
-        is_running && status="${G}🖥 RUNNING (PID: $(get_pid))${N}"
-        
-        # Path with wrapping
-        echo -e "${C}│${N} ${B}📁${N} ${W}Path:${N}"
-        echo "$COMFY_PATH" | fold -s -w 75 | while IFS= read -r line; do
-            echo -e "${C}│${N}   ${C}$line${N}"
-        done
-        
-        # Status
-        echo -e "${C}│${N} ${G}⚙${N}  ${W}Status:${N}"
-        echo -e "${C}│${N}   $status"
-        
-        # Args with wrapping
-        echo -e "${C}│${N} ${Y}⚡${N} ${W}Args:${N}"
-        echo "$LAUNCH_ARGS" | fold -s -w 75 | while IFS= read -r line; do
-            echo -e "${C}│${N}   ${R}$line${N}"
-        done
-        
-        # Venv with wrapping
-        if [[ -n "$VENV_PATH" ]]; then
-            echo -e "${C}│${N} ${P}🐍${N} ${W}Venv:${N}"
-            echo "$VENV_PATH" | fold -s -w 75 | while IFS= read -r line; do
-                echo -e "${C}│${N}   ${P}$line${N}"
-            done
+        local display_path="$COMFY_PATH"
+        # Show full path to ComfyUI folder if it exists
+        if [[ -d "$COMFY_PATH/ComfyUI" ]]; then
+            display_path="$COMFY_PATH/ComfyUI"
         fi
+        echo "$display_path" | fold -s -w 75 | while IFS= read -r line; do
+            echo -e "   ${C}$line${N}"
+        done
+    fi
+    
+    # Status
+    local status="${R}⏹ STOPPED${N}"
+    if [[ -n "$COMFY_PATH" ]] && validate_setup; then
+        is_running && status="${G}🖥 RUNNING (PID: $(get_pid))${N}"
+    fi
+    echo -e " ${G}⚙${N}  \e[38;5;39mStatus:${N}"
+    echo -e "   $status"
+    
+    # Args with wrapping
+    echo -e " ${Y}⚡${N} \e[38;5;39mArgs:${N}"
+    echo "$LAUNCH_ARGS" | fold -s -w 75 | while IFS= read -r line; do
+        echo -e "   ${G}$line${N}"
+    done
+    
+    # Venv with wrapping
+    if [[ -n "$VENV_PATH" ]]; then
+        echo -e " ${P}🐍${N} \e[38;5;39mVenv:${N}"
+        echo "$VENV_PATH" | fold -s -w 75 | while IFS= read -r line; do
+            echo -e "   ${P}$line${N}"
+        done
     fi
     rbox_bottom
     echo ""
@@ -914,7 +952,7 @@ show_menu() {
     rbox_bottom
     echo ""
     
-    echo -ne "\e[38;5;33m➜\e[0m \e[38;5;27mSelect option:\e[0m "
+    echo -ne "\e[38;5;39m➜\e[0m \e[38;5;39mSelect option:\e[0m "
 }
 
 # CLI argument handling

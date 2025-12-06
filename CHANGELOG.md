@@ -5,6 +5,35 @@ All notable changes to ComfyUI Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2025-12-06
+
+### Added
+- Auto-detection of ComfyUI folder (accepts both parent folder and ComfyUI folder itself)
+- Full path display showing actual ComfyUI location
+- Aqua blue color scheme throughout entire UI
+- Enhanced tunnel functions with proper port detection from launch args
+
+### Changed
+- Box borders changed from rounded (╭╮╰╯) to angle brackets (<>)
+- All teal colors replaced with aqua blue (#39 color code)
+- Main menu now shows all sections even when path is invalid
+- Path warning displays inline instead of replacing entire info box
+- Exit animation updated with full ASCII art
+- Launch box now clears properly when server starts
+- Update status messages show proper colors (green/red)
+- Custom nodes disabled indicator changed to red circle
+- Launch arguments editor uses aqua blue throughout
+- Help menu colors updated to aqua blue with yellow highlights
+- Args text on main menu changed to green
+- Footer borders changed to use > instead of ╴
+- Exit key (E) in footer changed to purple color
+- Venv path menu colors updated (yellow example, aqua instructions)
+
+### Fixed
+- Server status detection works correctly with valid/invalid paths
+- Tunnel functions now use port from launch args or default 8188
+- Path validation no longer breaks menu display
+
 ## [1.3.0] - 2025-12-06
 
 ### Added
