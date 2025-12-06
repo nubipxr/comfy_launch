@@ -19,6 +19,10 @@ COMFY_PATH=""
 VENV_PATH=""
 LAUNCH_ARGS="--listen 0.0.0.0 --port 6057 --use-quad-cross-attention --cuda-malloc"
 SERVER_PORT=6057
+BROWSER="google-chrome"
+FILE_MANAGER="auto"
+AUTO_OPEN_BROWSER_SERVER="true"
+AUTO_OPEN_BROWSER_TUNNEL="false"
 
 get_port_from_args() {
     echo "$LAUNCH_ARGS" | grep -oP '(?<=--port )\d+' || echo "8188"
@@ -26,6 +30,11 @@ get_port_from_args() {
 
 load_config() {
     [[ -f "$CONFIG_FILE" ]] && source "$CONFIG_FILE" 2>/dev/null || true
+    # Set defaults if not in config
+    [[ -z "$BROWSER" ]] && BROWSER="google-chrome"
+    [[ -z "$FILE_MANAGER" ]] && FILE_MANAGER="auto"
+    [[ -z "$AUTO_OPEN_BROWSER_SERVER" ]] && AUTO_OPEN_BROWSER_SERVER="true"
+    [[ -z "$AUTO_OPEN_BROWSER_TUNNEL" ]] && AUTO_OPEN_BROWSER_TUNNEL="false"
 }
 
 save_config() {
@@ -33,6 +42,10 @@ save_config() {
 COMFY_PATH="$COMFY_PATH"
 VENV_PATH="$VENV_PATH"
 LAUNCH_ARGS="$LAUNCH_ARGS"
+BROWSER="$BROWSER"
+FILE_MANAGER="$FILE_MANAGER"
+AUTO_OPEN_BROWSER_SERVER="$AUTO_OPEN_BROWSER_SERVER"
+AUTO_OPEN_BROWSER_TUNNEL="$AUTO_OPEN_BROWSER_TUNNEL"
 EOF
 }
 
@@ -231,7 +244,7 @@ manage_custom_nodes() {
         echo -e "${R}0.${N} ${W}Back to Main Menu${N}"
         echo ""
         echo -e "\e[38;5;39mEnter a Node number for options:${N}"
-        echo -ne "\e[38;5;39m➜\e[0m${N} ${W}Select option:${N} "
+        echo -ne "\e[38;5;39m➜\e[0m \e[38;5;39mSelect option:\e[0m "
         read -r choice
         
         case "$choice" in
@@ -664,15 +677,13 @@ launch_server() {
             if [[ -n "$browser_url" ]]; then
                 echo -e "${G}✓ Server ready!${N}"
                 
-                if command -v google-chrome &>/dev/null; then
-                    google-chrome "$browser_url" &>/dev/null &
-                    echo -e "${G}🌐 Opened browser${N}"
-                elif command -v chromium &>/dev/null; then
-                    chromium "$browser_url" &>/dev/null &
-                    echo -e "${G}🌐 Opened browser${N}"
-                elif command -v firefox &>/dev/null; then
-                    firefox "$browser_url" &>/dev/null &
-                    echo -e "${G}🌐 Opened browser${N}"
+                if [[ "$AUTO_OPEN_BROWSER_SERVER" == "true" ]]; then
+                    if command -v "$BROWSER" &>/dev/null; then
+                        $BROWSER "$browser_url" &>/dev/null &
+                        echo -e "${G}🌐 Opened in $BROWSER${N}"
+                    else
+                        echo -e "${Y}⚠ Browser '$BROWSER' not found${N}"
+                    fi
                 fi
                 
                 browser_launched=true
@@ -802,6 +813,7 @@ tunnel_cloudflare() {
     draw_tunnel_footer
     
     local last_line=0
+    local browser_opened=false
     while kill -0 "$tunnel_pid" 2>/dev/null; do
         local current_lines=$(wc -l < /tmp/comfy_tunnel.log 2>/dev/null || echo 0)
         if [ $current_lines -gt $last_line ]; then
@@ -811,7 +823,17 @@ tunnel_cloudflare() {
             
             if [[ -z "$tunnel_url" ]]; then
                 tunnel_url=$(grep -oP "https://[a-z0-9-]+\.trycloudflare\.com" /tmp/comfy_tunnel.log 2>/dev/null | head -1)
-                [[ -n "$tunnel_url" ]] && footer_lines=4 && tput csr $header_lines $((rows - footer_lines - 1))
+                if [[ -n "$tunnel_url" ]]; then
+                    footer_lines=4
+                    tput csr $header_lines $((rows - footer_lines - 1))
+                    
+                    if [[ "$AUTO_OPEN_BROWSER_TUNNEL" == "true" ]] && ! $browser_opened; then
+                        if command -v "$BROWSER" &>/dev/null; then
+                            $BROWSER "$tunnel_url" &>/dev/null &
+                        fi
+                        browser_opened=true
+                    fi
+                fi
             fi
             
             draw_tunnel_footer
@@ -903,6 +925,7 @@ tunnel_pinggy() {
     draw_tunnel_footer
     
     local last_line=0
+    local browser_opened=false
     while kill -0 "$tunnel_pid" 2>/dev/null; do
         local current_lines=$(wc -l < /tmp/comfy_pinggy.log 2>/dev/null || echo 0)
         if [ $current_lines -gt $last_line ]; then
@@ -912,7 +935,17 @@ tunnel_pinggy() {
             
             if [[ -z "$tunnel_url" ]]; then
                 tunnel_url=$(grep -oP "https?://[a-z0-9-]+\.a\.free\.pinggy\.link" /tmp/comfy_pinggy.log 2>/dev/null | head -1)
-                [[ -n "$tunnel_url" ]] && footer_lines=4 && tput csr $header_lines $((rows - footer_lines - 1))
+                if [[ -n "$tunnel_url" ]]; then
+                    footer_lines=4
+                    tput csr $header_lines $((rows - footer_lines - 1))
+                    
+                    if [[ "$AUTO_OPEN_BROWSER_TUNNEL" == "true" ]] && ! $browser_opened; then
+                        if command -v "$BROWSER" &>/dev/null; then
+                            $BROWSER "$tunnel_url" &>/dev/null &
+                        fi
+                        browser_opened=true
+                    fi
+                fi
             fi
             
             draw_tunnel_footer
@@ -928,14 +961,44 @@ tunnel_pinggy() {
 }
 
 open_folder() {
-    for fm in nemo dolphin nautilus; do
-        if command -v $fm &>/dev/null; then
-            $fm "$COMFY_PATH" &>/dev/null &
-            echo -e "${G}✓ Opened${N}"
-            return 0
+    local target_path="${1:-$COMFY_PATH}"
+    
+    if [[ "$FILE_MANAGER" == "auto" ]]; then
+        for fm in nemo dolphin nautilus; do
+            if command -v $fm &>/dev/null; then
+                $fm "$target_path" &>/dev/null &
+                echo -e "${G}✓ Opened in $fm${N}"
+                return 0
+            fi
+        done
+        xdg-open "$target_path" &>/dev/null &
+    else
+        if command -v "$FILE_MANAGER" &>/dev/null; then
+            $FILE_MANAGER "$target_path" &>/dev/null &
+            echo -e "${G}✓ Opened in $FILE_MANAGER${N}"
+        else
+            echo -e "${R}✗ File manager '$FILE_MANAGER' not found${N}"
+            return 1
         fi
-    done
-    xdg-open "$COMFY_PATH" &>/dev/null &
+    fi
+}
+
+open_output_folder() {
+    if [[ -z "$COMFY_PATH" ]] || ! validate_setup; then
+        echo -e "${R}✗ Set valid ComfyUI path first${N}"
+        sleep 2
+        return 1
+    fi
+    
+    local output_path="$COMFY_PATH/ComfyUI/output"
+    if [[ ! -d "$output_path" ]]; then
+        echo -e "${Y}⚠ Output folder doesn't exist yet${N}"
+        sleep 2
+        return 1
+    fi
+    
+    open_folder "$output_path"
+    sleep 1
 }
 
 set_path() {
@@ -1033,12 +1096,164 @@ edit_launch_args() {
 }
 
 
+show_settings() {
+    while true; do
+        clear
+        show_header
+        echo -e "${W}SETTINGS${N}"
+        divider
+        echo ""
+        
+        # System Information
+        echo -e "${BG}SYSTEM INFORMATION${N}"
+        local cpu_model=$(grep "model name" /proc/cpuinfo | head -1 | cut -d: -f2 | xargs)
+        local gpu_info=$(lspci 2>/dev/null | grep -i vga | cut -d: -f3 | xargs || echo "Not detected")
+        local hostname=$(hostname)
+        local ip=$(hostname -I | awk '{print $1}' || echo "Not detected")
+        local ram_total=$(free -h | awk '/^Mem:/ {print $2}')
+        local ram_used=$(free -h | awk '/^Mem:/ {print $3}')
+        
+        echo -e "  \e[38;5;39m💻 CPU:${N} ${GR}$cpu_model${N}"
+        echo -e "  \e[38;5;39m🎮 GPU:${N} ${GR}$gpu_info${N}"
+        echo -e "  \e[38;5;39m🖥  Hostname:${N} ${GR}$hostname${N}"
+        echo -e "  \e[38;5;39m🌐 IP Address:${N} ${GR}$ip${N}"
+        echo -e "  \e[38;5;39m💾 RAM:${N} ${GR}$ram_used / $ram_total${N}"
+        echo ""
+        
+        # ComfyUI Information
+        if [[ -n "$COMFY_PATH" ]] && validate_setup; then
+            echo -e "${BG}COMFYUI INFORMATION${N}"
+            local nodes_count=$(find "$COMFY_PATH/ComfyUI/custom_nodes" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | grep -v __pycache__ | wc -l)
+            local python_ver=$("$VENV_PATH/bin/python" --version 2>&1 | cut -d' ' -f2)
+            local venv_path_display="$VENV_PATH"
+            
+            echo -e "  \e[38;5;39m📦 Custom Nodes:${N} ${GR}$nodes_count installed${N}"
+            echo -e "  \e[38;5;39m🐍 Python Version:${N} ${GR}$python_ver${N}"
+            echo -e "  \e[38;5;39m📁 Venv Path:${N} ${GR}$venv_path_display${N}"
+            echo ""
+        fi
+        
+        # Application Settings
+        echo -e "${BG}APPLICATION SETTINGS${N}"
+        echo -e "  ${BC}1.${N} \e[38;5;39m🌐 Web Browser:${N} ${G}$BROWSER${N}"
+        echo -e "  ${BC}2.${N} \e[38;5;39m📁 File Manager:${N} ${G}$FILE_MANAGER${N}"
+        echo -e "  ${BC}3.${N} \e[38;5;39m🚀 Auto-open Browser (Server):${N} ${G}$AUTO_OPEN_BROWSER_SERVER${N}"
+        echo -e "  ${BC}4.${N} \e[38;5;39m☁️  Auto-open Browser (Tunnel):${N} ${G}$AUTO_OPEN_BROWSER_TUNNEL${N}"
+        echo ""
+        
+        divider
+        echo -e "${R}0.${N} ${W}Back to Main Menu${N}"
+        echo ""
+        echo -ne "\e[38;5;39m➜\e[0m ${W}Select option:${N} "
+        read -r choice
+        
+        case "$choice" in
+            1)
+                echo ""
+                echo -e "\e[38;5;39mEnter browser command (e.g., google-chrome, firefox, chromium):${N}"
+                echo -e "${Y}Current: $BROWSER${N}"
+                read -r new_browser
+                if [[ -n "$new_browser" ]]; then
+                    BROWSER="$new_browser"
+                    save_config
+                    echo -e "${G}✓ Browser updated to: $BROWSER${N}"
+                    sleep 1
+                fi
+                ;;
+            2)
+                echo ""
+                echo -e "\e[38;5;39mSelect file manager:${N}"
+                echo -e "  ${BC}1.${N} Auto-detect"
+                echo -e "  ${BC}2.${N} Nemo"
+                echo -e "  ${BC}3.${N} Dolphin"
+                echo -e "  ${BC}4.${N} Nautilus"
+                echo -e "  ${BC}5.${N} Custom command"
+                echo -ne "\e[38;5;39m➜\e[0m ${W}Choice:${N} "
+                read -r fm_choice
+                case "$fm_choice" in
+                    1) FILE_MANAGER="auto" ;;
+                    2) FILE_MANAGER="nemo" ;;
+                    3) FILE_MANAGER="dolphin" ;;
+                    4) FILE_MANAGER="nautilus" ;;
+                    5)
+                        echo -e "\e[38;5;39mEnter custom file manager command:${N}"
+                        read -r custom_fm
+                        [[ -n "$custom_fm" ]] && FILE_MANAGER="$custom_fm"
+                        ;;
+                esac
+                save_config
+                echo -e "${G}✓ File manager updated to: $FILE_MANAGER${N}"
+                sleep 1
+                ;;
+            3)
+                if [[ "$AUTO_OPEN_BROWSER_SERVER" == "true" ]]; then
+                    AUTO_OPEN_BROWSER_SERVER="false"
+                else
+                    AUTO_OPEN_BROWSER_SERVER="true"
+                fi
+                save_config
+                echo -e "${G}✓ Auto-open browser (server) set to: $AUTO_OPEN_BROWSER_SERVER${N}"
+                sleep 1
+                ;;
+            4)
+                if [[ "$AUTO_OPEN_BROWSER_TUNNEL" == "true" ]]; then
+                    AUTO_OPEN_BROWSER_TUNNEL="false"
+                else
+                    AUTO_OPEN_BROWSER_TUNNEL="true"
+                fi
+                save_config
+                echo -e "${G}✓ Auto-open browser (tunnel) set to: $AUTO_OPEN_BROWSER_TUNNEL${N}"
+                sleep 1
+                ;;
+            0)
+                return
+                ;;
+            *)
+                echo -e "${R}Invalid option${N}"
+                sleep 1
+                ;;
+        esac
+    done
+}
+
+
 show_help() {
     clear
     show_header
     echo -e "${W}HELP & RESOURCES${N}"
     divider
     echo ""
+    
+    echo -e "${BG}ABOUT COMFYUI LAUNCHER${N}"
+    echo -e "${GR}This launcher simplifies managing ComfyUI with an intuitive menu interface.${N}"
+    echo -e "${GR}It handles server startup, updates, custom nodes, and tunneling.${N}"
+    echo ""
+    
+    echo -e "${BG}PATHS & VENV${N}"
+    echo -e "${W}ComfyUI Path:${N} ${GR}The root folder containing your ComfyUI/ directory.${N}"
+    echo -e "${GR}  Example: /home/user/comfy (contains ComfyUI/ and venv/)${N}"
+    echo -e "${GR}  The launcher auto-detects if you select the ComfyUI folder itself.${N}"
+    echo ""
+    echo -e "${W}Virtual Environment (venv):${N} ${GR}Python isolated environment for ComfyUI.${N}"
+    echo -e "${GR}  Default location: COMFY_PATH/venv${N}"
+    echo -e "${GR}  Contains all Python packages and dependencies.${N}"
+    echo ""
+    
+    echo -e "${BG}TUNNELS${N}"
+    echo -e "${W}What are tunnels?${N} ${GR}Tunnels expose your local ComfyUI to the internet.${N}"
+    echo -e "${GR}  Useful for: Remote access, sharing with others, mobile access.${N}"
+    echo ""
+    echo -e "${W}Cloudflare Tunnel:${N} ${G}Recommended${N}"
+    echo -e "${GR}  • No time limit${N}"
+    echo -e "${GR}  • Fast and reliable${N}"
+    echo -e "${GR}  • Requires cloudflared installation${N}"
+    echo ""
+    echo -e "${W}Pinggy Tunnel:${N} ${Y}Free tier: 60 minutes${N}"
+    echo -e "${GR}  • No installation needed (uses SSH)${N}"
+    echo -e "${GR}  • Good for quick sharing${N}"
+    echo -e "${GR}  • Time limited on free tier${N}"
+    echo ""
+    
     echo -e "${W}USAGE:${N}"
     echo -e "  \e[38;5;39mcomfy_launch.sh${N}                ${GR}Interactive menu${N}"
     echo -e "  \e[38;5;39mcomfy_launch.sh start${N}          ${GR}Start server${N}"
@@ -1127,8 +1342,10 @@ show_menu() {
     rbox_line "${M}6.${N} ${W}☁️  Cloudflare Tunnel${N}"
     rbox_line "${C}7.${N} ${W}🌐 Pinggy Tunnel${N} ${GR}(60min free)${N}"
     rbox_line "${B}8.${N} ${W}📁 Open Folder${N}"
+    rbox_line "${G}O.${N} ${W}📸 Open Output Folder${N}"
     rbox_line "${B}9.${N} ${W}⚙️  Set ComfyUI Path${N}"
     rbox_line "${P}V.${N} ${W}🐍 Set Venv Path${N} ${GR}(Python virtual environment)${N}"
+    rbox_line "${M}S.${N} ${W}⚙️  Settings${N}"
     rbox_line "${W}H.${N} ${W}❓ Help & Links${N}"
     rbox_line "${R}0.${N} ${W}👋 Exit${N}"
     echo -e "\e[38;5;27m<$(printf '─%.0s' {1..84})>${N}"
@@ -1251,6 +1468,9 @@ while true; do
             fi
             sleep 2
             ;;
+        [Oo])
+            open_output_folder
+            ;;
         9)
             set_path
             sleep 2
@@ -1258,6 +1478,9 @@ while true; do
         [Vv])
             set_venv
             sleep 2
+            ;;
+        [Ss])
+            show_settings
             ;;
         [Hh])
             show_help
