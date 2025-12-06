@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# ComfyUI Launcher v1.1.8
+# ComfyUI Launcher v1.1.9
 # https://cloudwerx.dev | https://github.com/CLOUDWERX-DEV/comfy_launch
 
 set -o pipefail
@@ -346,16 +346,19 @@ launch_server() {
         
         # Draw tunnel section if active or waiting
         if [[ -n "$tunnel_url" ]]; then
-            echo -e "${C}╭─[ ${M}☁️  CLOUDFLARE TUNNEL${C} ]────────────────────────────────────────────────────────────╴${N}"
-            echo -e "${C}│${N} ${BC}$tunnel_url${N}"
+            echo -e "${C}╭─[ ${M}☁️  CLOUDFLARE TUNNEL${C} ]────────────────────────────────────────────────────────╴${N}"
+            echo -e "${C}│${N} ${Y}$tunnel_url${N}"
+            echo -e "${C}├────────────────────────────────────────────────────────────────────────────────────╴${N}"
+            echo -e "${C}│${N} ${M}T${N}=Tunnel ${C}P${N}=Pinggy ${Y}K${N}=Kill ${G}S${N}=Save ${BC}M${N}=Menu ${P}E${N}=Exit ${GR}| PID: ${R}$pid${N}"
         elif [[ -n "$tunnel_status" ]]; then
-            echo -e "${C}╭─[ ${M}☁️  CLOUDFLARE TUNNEL${C} ]────────────────────────────────────────────────────────────╴${N}"
+            echo -e "${C}╭─[ ${M}☁️  CLOUDFLARE TUNNEL${C} ]────────────────────────────────────────────────────────╴${N}"
             echo -e "${C}│${N} ${Y}$tunnel_status${N}"
+            echo -e "${C}├────────────────────────────────────────────────────────────────────────────────────╴${N}"
+            echo -e "${C}│${N} ${M}T${N}=Tunnel ${C}P${N}=Pinggy ${Y}K${N}=Kill ${G}S${N}=Save ${BC}M${N}=Menu ${P}E${N}=Exit ${GR}| PID: ${R}$pid${N}"
+        else
+            echo -e "${C}╭────────────────────────────────────────────────────────────────────────────────────╴${N}"
+            echo -e "${C}│${N} ${M}T${N}=Tunnel ${C}P${N}=Pinggy ${Y}K${N}=Kill ${G}S${N}=Save ${BC}M${N}=Menu ${P}E${N}=Exit ${GR}| PID: ${R}$pid${N}"
         fi
-        
-        # Draw footer controls
-        echo -e "${C}╭────────────────────────────────────────────────────────────────────────────────────╴${N}"
-        echo -e "${C}│${N} ${M}T${N}=Tunnel ${Y}K${N}=Kill ${G}S${N}=Save ${BC}M${N}=Menu ${P}E${N}=Exit ${GR}| PID: $pid${N}"
     }
     
     # Handle footer commands
@@ -413,8 +416,24 @@ launch_server() {
                     fi
                 fi
                 ;;
+            p|P)
+                if [[ -z "$server_url" ]]; then
+                    return 0
+                fi
+                
+                if ! command -v ssh &>/dev/null; then
+                    return 0
+                fi
+                
+                local rows=$(tput lines)
+                tput cup $((rows - footer_lines - 2)) 0
+                echo -e "${C}🌐 Starting Pinggy tunnel (60min free)...${N}"
+                echo "yes" | ssh -p 443 -R0:localhost:${server_url##*:} qr@free.pinggy.io
+                ;;
             k|K)
-                echo -e "\n${Y}⏹  Stopping server...${N}"
+                local rows=$(tput lines)
+                tput cup $((rows - footer_lines - 2)) 0
+                echo -e "${Y}⏹  Stopping server...${N}"
                 kill $pid 2>/dev/null
                 [[ -n "$tunnel_pid" ]] && kill $tunnel_pid 2>/dev/null
                 sleep 1
@@ -422,12 +441,16 @@ launch_server() {
                 return 1
                 ;;
             s|S)
+                local rows=$(tput lines)
+                tput cup $((rows - footer_lines - 2)) 0
                 local logfile="comfy_$(date +%Y%m%d_%H%M%S).log"
                 cp /tmp/comfy_launch_output.log "$COMFY_PATH/$logfile"
-                echo -e "\n${G}✓ Logs saved: $COMFY_PATH/$logfile${N}"
+                echo -e "${G}✓ Logs saved: $COMFY_PATH/$logfile${N}"
                 ;;
             m|M)
-                echo -e "\n${C}↩  Returning to menu (server still running)...${N}"
+                local rows=$(tput lines)
+                tput cup $((rows - footer_lines - 2)) 0
+                echo -e "${C}↩  Returning to menu (server still running)...${N}"
                 if [[ -n "$tunnel_pid" ]]; then
                     echo -e "${Y}⚠ Stopping tunnel...${N}"
                     kill $tunnel_pid 2>/dev/null
@@ -437,7 +460,9 @@ launch_server() {
                 return 1
                 ;;
             e|E)
-                echo -e "\n${P}👋 Exiting (server still running)...${N}"
+                local rows=$(tput lines)
+                tput cup $((rows - footer_lines - 2)) 0
+                echo -e "${P}👋 Exiting (server still running)...${N}"
                 if [[ -n "$tunnel_pid" ]]; then
                     echo -e "${Y}⚠ Stopping tunnel...${N}"
                     kill $tunnel_pid 2>/dev/null
