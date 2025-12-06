@@ -222,18 +222,22 @@ manage_custom_nodes() {
             
             local status_icon="${G}●${N}"
             local name_color="$Y"
+            local desc_color="\e[38;5;39m"
+            local url_color="$C"
             if $is_disabled; then
                 status_icon="${R}○${N}"
-                name_color="$GR"
+                name_color="${GR}"
+                desc_color="${GR}"
+                url_color="${GR}"
             fi
             
             echo -e "\e[38;5;39m$i.${N} $status_icon ${name_color}$display_name${N} ${GR}${version:+v$version}${N}"
             if [[ -n "$desc" ]]; then
                 while IFS= read -r line; do
-                    echo -e "     \e[38;5;39m$line${N}"
+                    echo -e "     ${desc_color}$line${N}"
                 done < <(echo "$desc" | fold -s -w 77)
             fi
-            [[ -n "$repo_url" ]] && echo -e "     ${C}🔗 $repo_url${N}"
+            [[ -n "$repo_url" ]] && echo -e "     ${url_color}🔗 $repo_url${N}"
             echo ""
             ((i++))
         done
@@ -828,6 +832,7 @@ tunnel_cloudflare() {
                     tput csr $header_lines $((rows - footer_lines - 1))
                     
                     if [[ "$AUTO_OPEN_BROWSER_TUNNEL" == "true" ]] && ! $browser_opened; then
+                        sleep 5
                         if command -v "$BROWSER" &>/dev/null; then
                             $BROWSER "$tunnel_url" &>/dev/null &
                         fi
@@ -940,6 +945,7 @@ tunnel_pinggy() {
                     tput csr $header_lines $((rows - footer_lines - 1))
                     
                     if [[ "$AUTO_OPEN_BROWSER_TUNNEL" == "true" ]] && ! $browser_opened; then
+                        sleep 5
                         if command -v "$BROWSER" &>/dev/null; then
                             $BROWSER "$tunnel_url" &>/dev/null &
                         fi
@@ -1107,17 +1113,28 @@ show_settings() {
         # System Information
         echo -e "${BG}SYSTEM INFORMATION${N}"
         local cpu_model=$(grep "model name" /proc/cpuinfo | head -1 | cut -d: -f2 | xargs)
-        local gpu_info=$(lspci 2>/dev/null | grep -i vga | cut -d: -f3 | xargs || echo "Not detected")
+        
+        # Detect GPU - prioritize NVIDIA/AMD discrete cards
+        local gpu_info="Not detected"
+        if command -v nvidia-smi &>/dev/null; then
+            gpu_info=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -1)
+        fi
+        if [[ "$gpu_info" == "Not detected" ]]; then
+            gpu_info=$(lspci 2>/dev/null | grep -iE "VGA|3D|Display" | grep -iE "NVIDIA|AMD|Radeon" | head -1 | sed 's/.*: //' || echo "Not detected")
+        fi
+        
         local hostname=$(hostname)
         local ip=$(hostname -I | awk '{print $1}' || echo "Not detected")
-        local ram_total=$(free -h | awk '/^Mem:/ {print $2}')
-        local ram_used=$(free -h | awk '/^Mem:/ {print $3}')
+        
+        # RAM in GB
+        local ram_total_gb=$(free -g | awk '/^Mem:/ {print $2}')
+        local ram_used_gb=$(free -g | awk '/^Mem:/ {print $3}')
         
         echo -e "  \e[38;5;39m💻 CPU:${N} ${GR}$cpu_model${N}"
         echo -e "  \e[38;5;39m🎮 GPU:${N} ${GR}$gpu_info${N}"
         echo -e "  \e[38;5;39m🖥  Hostname:${N} ${GR}$hostname${N}"
         echo -e "  \e[38;5;39m🌐 IP Address:${N} ${GR}$ip${N}"
-        echo -e "  \e[38;5;39m💾 RAM:${N} ${GR}$ram_used / $ram_total${N}"
+        echo -e "  \e[38;5;39m💾 RAM:${N} ${GR}${ram_used_gb}GB / ${ram_total_gb}GB${N}"
         echo ""
         
         # ComfyUI Information
@@ -1219,73 +1236,213 @@ show_settings() {
 
 show_help() {
     clear
-    show_header
-    echo -e "${W}HELP & RESOURCES${N}"
-    divider
+    echo -e "${M}       _____ _____ _____ _____ __ __    __    _____ _____ _____ _____ _____ ${N}"
+    sleep 0.05
+    echo -e "${M}      |     |     |     |   __|  |  |  |  |  |  _  |  |  |   | |     |  |  |${N}"
+    sleep 0.05
+    echo -e "${P}      |   --|  |  | | | |   __|_   _|  |  |__|     |  |  | | | |   --|     |${N}"
+    sleep 0.05
+    echo -e "${P}      |_____|_____|_|_|_|__|    |_|    |_____|__|__|_____|_|___|_____|__|__|${N}"
+    sleep 0.05
+    echo -e "   \e[38;5;39m<───\e[0m \e[38;5;33mhttps://github.com/CLOUDWERX-DEV/comfy_launch\e[0m ${W}»${N} \e[38;5;39mhttps://cloudwerx.dev\e[0m \e[38;5;39m───>${N}"
     echo ""
-    
-    echo -e "${BG}ABOUT COMFYUI LAUNCHER${N}"
-    echo -e "${GR}This launcher simplifies managing ComfyUI with an intuitive menu interface.${N}"
-    echo -e "${GR}It handles server startup, updates, custom nodes, and tunneling.${N}"
+    echo -e "${Y}HELP & RESOURCES${N}"
+    echo -e "\e[38;5;27m────────────────────────────────────────────────────────────────────────────────────\e[0m"
     echo ""
-    
-    echo -e "${BG}PATHS & VENV${N}"
-    echo -e "${W}ComfyUI Path:${N} ${GR}The root folder containing your ComfyUI/ directory.${N}"
-    echo -e "${GR}  Example: /home/user/comfy (contains ComfyUI/ and venv/)${N}"
-    echo -e "${GR}  The launcher auto-detects if you select the ComfyUI folder itself.${N}"
+    echo -e "${Y}ABOUT COMFYUI LAUNCHER${N}"
+    echo -e "\e[38;5;27mThis launcher simplifies managing ComfyUI with an intuitive menu interface."
+    echo -e "It handles server startup, updates, custom nodes, and tunneling.\e[0m"
     echo ""
-    echo -e "${W}Virtual Environment (venv):${N} ${GR}Python isolated environment for ComfyUI.${N}"
-    echo -e "${GR}  Default location: COMFY_PATH/venv${N}"
-    echo -e "${GR}  Contains all Python packages and dependencies.${N}"
+    echo -e "${Y}PATHS & VENV${N}"
+    echo -e "\e[38;5;39mComfyUI Path:\e[0m \e[38;5;27mThe root folder containing your ComfyUI/ directory.\e[0m"
+    echo -e "  \e[38;5;39mExample:\e[0m \e[38;5;27m/home/user/comfy (contains ComfyUI/ and venv/)\e[0m"
+    echo -e "  \e[38;5;39mThe launcher auto-detects if you select the ComfyUI folder itself.\e[0m"
     echo ""
-    
-    echo -e "${BG}TUNNELS${N}"
-    echo -e "${W}What are tunnels?${N} ${GR}Tunnels expose your local ComfyUI to the internet.${N}"
-    echo -e "${GR}  Useful for: Remote access, sharing with others, mobile access.${N}"
+    echo -e "\e[38;5;39mVirtual Environment (venv):\e[0m \e[38;5;27mPython isolated environment for ComfyUI.\e[0m"
+    echo -e "  \e[38;5;39mDefault location:\e[0m \e[38;5;27mCOMFY_PATH/venv\e[0m"
+    echo -e "  \e[38;5;39mContains all Python packages and dependencies.\e[0m"
     echo ""
-    echo -e "${W}Cloudflare Tunnel:${N} ${G}Recommended${N}"
-    echo -e "${GR}  • No time limit${N}"
-    echo -e "${GR}  • Fast and reliable${N}"
-    echo -e "${GR}  • Requires cloudflared installation${N}"
+    echo -e "${Y}TUNNELS${N}"
+    echo -e "\e[38;5;39mWhat are tunnels?\e[0m \e[38;5;27mTunnels expose your local ComfyUI to the internet.\e[0m"
+    echo -e "  \e[38;5;39mUseful for:\e[0m \e[38;5;27mRemote access, sharing with others, mobile access.\e[0m"
     echo ""
-    echo -e "${W}Pinggy Tunnel:${N} ${Y}Free tier: 60 minutes${N}"
-    echo -e "${GR}  • No installation needed (uses SSH)${N}"
-    echo -e "${GR}  • Good for quick sharing${N}"
-    echo -e "${GR}  • Time limited on free tier${N}"
+    echo -e "${Y}Cloudflare Tunnel:\e[0m \e[38;5;39mRecommended\e[0m"
+    echo -e "  \e[38;5;39m• No time limit\e[0m"
+    echo -e "  \e[38;5;39m• Fast and reliable\e[0m"
+    echo -e "  \e[38;5;39m• Requires cloudflared installation\e[0m"
     echo ""
-    
-    echo -e "${W}USAGE:${N}"
-    echo -e "  \e[38;5;39mcomfy_launch.sh${N}                ${GR}Interactive menu${N}"
-    echo -e "  \e[38;5;39mcomfy_launch.sh start${N}          ${GR}Start server${N}"
-    echo -e "  \e[38;5;39mcomfy_launch.sh update${N}         ${GR}Update ComfyUI${N}"
-    echo -e "  \e[38;5;39mcomfy_launch.sh kill${N}           ${GR}Kill server${N}"
-    echo -e "  \e[38;5;39mcomfy_launch.sh nodes${N}          ${GR}Manage custom nodes${N}"
-    echo -e "  \e[38;5;39mcomfy_launch.sh update-nodes${N}   ${GR}Update all nodes${N}"
-    echo -e "  \e[38;5;39mcomfy_launch.sh tunnel cf${N}      ${GR}Cloudflare tunnel${N}"
-    echo -e "  \e[38;5;39mcomfy_launch.sh tunnel pinggy${N}  ${GR}Pinggy tunnel${N}"
-    echo -e "  \e[38;5;39mcomfy_launch.sh path /dir${N}      ${GR}Set ComfyUI path${N}"
-    echo -e "  \e[38;5;39mcomfy_launch.sh venv /dir${N}      ${GR}Set venv path${N}"
-    echo -e "  \e[38;5;39mcomfy_launch.sh folder${N}         ${GR}Open folder${N}"
+    echo -e "${Y}Pinggy Tunnel:\e[0m \e[38;5;39mFree tier: 60 minutes\e[0m"
+    echo -e "  \e[38;5;39m• No installation needed (uses SSH)\e[0m"
+    echo -e "  \e[38;5;39m• Good for quick sharing\e[0m"
+    echo -e "  \e[38;5;39m• Time limited on free tier\e[0m"
     echo ""
-    echo -e "${W}LINKS:${N}"
-    echo -e "  \e[38;5;39m🏠 https://cloudwerx.dev${N}                              ${GR}Homepage & Blog${N}"
-    echo -e "  \e[38;5;39m📖 https://comfyanonymous.github.io/ComfyUI_examples/${N} ${GR}Official Examples & Workflows${N}"
-    echo -e "  \e[38;5;39m📚 https://docs.comfy.org${N}                             ${GR}Official Documentation${N}"
-    echo -e "  \e[38;5;39m🐙 https://github.com/comfyanonymous/ComfyUI${N}          ${GR}ComfyUI Source Code${N}"
-    echo -e "  \e[38;5;39m💻 https://github.com/CLOUDWERX-DEV/comfy_launch${N}      ${GR}This Script (Report Issues)${N}"
-    echo -e "  \e[38;5;39m🤗 https://huggingface.co/Comfy-Org${N}                   ${GR}Official Models & Resources${N}"
-    echo -e "  \e[38;5;39m🎨 https://civitai.com${N}                                ${GR}Community Models & LoRAs${N}"
+    echo -e "${Y}USAGE:${N}"
+    echo -e "  ${Y}comfy_launch.sh\e[0m \e[38;5;39m(or launch)\e[0m"
+    echo -e "    \e[38;5;27mLaunch interactive menu (default)\e[0m"
     echo ""
-    echo -e "${W}SUPPORT:${N}"
-    echo -e "  \e[38;5;39m☕ https://buymeacoffee.com/cloudwerxl3${N}               ${GR}Buy Me A Coffee (Donate)${N}"
-    echo -e "  \e[38;5;39m💬 https://discord.gg/EQSBU5aK${N}                        ${GR}Discord Server (Help & Chat)${N}"
-    echo -e "  \e[38;5;39m📧 mail@cloudwerx.dev${N}                                 ${GR}Email Contact${N}"
+    echo -e "  ${Y}comfy_launch.sh start\e[0m \e[38;5;39m(or launch)\e[0m"
+    echo -e "    \e[38;5;27mStart ComfyUI server immediately\e[0m"
+    echo -e "    \e[38;5;39mRequires: Valid ComfyUI path configured\e[0m"
     echo ""
-    echo -e "${W}TROUBLESHOOTING:${N}"
-    echo -e "  ${R}✗${N} Port busy? \e[38;5;39mcomfy_launch.sh kill${N}"
-    echo -e "  ${R}✗${N} No venv? \e[38;5;39mcd ComfyUI && python -m venv venv${N}"
+    echo -e "  ${Y}comfy_launch.sh update${N}"
+    echo -e "    \e[38;5;27mUpdate ComfyUI to latest version\e[0m"
+    echo -e "    \e[38;5;39mUses: git pull in ComfyUI directory\e[0m"
     echo ""
-    read -p "Press Enter to continue..."
+    echo -e "  ${Y}comfy_launch.sh kill\e[0m \e[38;5;39m(or stop)\e[0m"
+    echo -e "    \e[38;5;27mStop running ComfyUI server\e[0m"
+    echo -e "    \e[38;5;39mDetects port from launch args\e[0m"
+    echo -e "    \e[38;5;39mWorks even if server started outside launcher\e[0m"
+    echo ""
+    echo -e "  ${Y}comfy_launch.sh nodes${N}"
+    echo -e "    \e[38;5;27mOpen custom nodes manager (interactive)\e[0m"
+    echo -e "    \e[38;5;39mUpdate, enable/disable, or delete nodes\e[0m"
+    echo ""
+    echo -e "  ${Y}comfy_launch.sh update-nodes${N}"
+    echo -e "    \e[38;5;27mUpdate all custom nodes at once\e[0m"
+    echo -e "    \e[38;5;39mRuns git pull in each node directory\e[0m"
+    echo ""
+    echo -e "  ${Y}comfy_launch.sh tunnel\e[0m \e[38;5;39m[cf|pinggy]\e[0m"
+    echo -e "    \e[38;5;27mStart tunnel to expose server publicly\e[0m"
+    echo -e "    ${Y}cf\e[0m      \e[38;5;39m- Cloudflare tunnel (recommended, no time limit)\e[0m"
+    echo -e "    ${Y}pinggy\e[0m  \e[38;5;39m- Pinggy tunnel (60min free, no install needed)\e[0m"
+    echo -e "    \e[38;5;39mRequires: Server must be running first\e[0m"
+    echo -e "    \e[38;5;39mUses port from launch args or default 8188\e[0m"
+    echo ""
+    echo -e "  ${Y}comfy_launch.sh path\e[0m \e[38;5;39m[/directory]\e[0m"
+    echo -e "    \e[38;5;27mSet ComfyUI root path\e[0m"
+    echo -e "    \e[38;5;39mWith arg: Set path directly\e[0m"
+    echo -e "    \e[38;5;39mNo arg: Interactive prompt\e[0m"
+    echo -e "    \e[38;5;39mExample: comfy_launch.sh path /home/user/comfy\e[0m"
+    echo ""
+    echo -e "  ${Y}comfy_launch.sh venv\e[0m \e[38;5;39m[/directory]\e[0m"
+    echo -e "    \e[38;5;27mSet custom venv path\e[0m"
+    echo -e "    \e[38;5;39mWith arg: Set path directly\e[0m"
+    echo -e "    \e[38;5;39mNo arg: Interactive prompt\e[0m"
+    echo -e "    \e[38;5;39mExample: comfy_launch.sh venv /home/user/comfy/venv\e[0m"
+    echo ""
+    echo -e "  ${Y}comfy_launch.sh folder\e[0m \e[38;5;39m(or open)\e[0m"
+    echo -e "    \e[38;5;27mOpen ComfyUI folder in file manager\e[0m"
+    echo -e "    \e[38;5;39mUses configured file manager from settings\e[0m"
+    echo ""
+    echo -e "  ${Y}comfy_launch.sh settings${N}"
+    echo -e "    \e[38;5;27mOpen settings menu\e[0m"
+    echo -e "    \e[38;5;39mConfigure browser, file manager, auto-open options\e[0m"
+    echo ""
+    echo -e "  ${Y}comfy_launch.sh help\e[0m \e[38;5;39m(or -h or --help)\e[0m"
+    echo -e "    \e[38;5;27mShow this help screen\e[0m"
+    echo ""
+    echo -e "${Y}COMFYUI LAUNCH ARGUMENTS${N}"
+    echo -e "\e[38;5;27mEdit via menu option 5 or directly in config file\e[0m"
+    echo ""
+    echo -e "${Y}Network:${N}"
+    echo -e "  ${Y}--listen 0.0.0.0\e[0m              \e[38;5;27mListen on all interfaces (default: 127.0.0.1)\e[0m"
+    echo -e "  ${Y}--port 8188\e[0m                   \e[38;5;27mSet port number (default: 8188)\e[0m"
+    echo -e "  ${Y}--enable-cors-header\e[0m          \e[38;5;27mEnable CORS for API access\e[0m"
+    echo ""
+    echo -e "${Y}VRAM Modes (mutually exclusive):${N}"
+    echo -e "  ${Y}--gpu-only\e[0m                    \e[38;5;27mKeep everything on GPU (fastest, needs most VRAM)\e[0m"
+    echo -e "  ${Y}--highvram\e[0m                    \e[38;5;27mKeep models in GPU (24GB+ VRAM)\e[0m"
+    echo -e "  ${Y}--normalvram\e[0m                  \e[38;5;27mNormal VRAM usage (8-16GB VRAM)\e[0m"
+    echo -e "  ${Y}--lowvram\e[0m                     \e[38;5;27mSplit unet for less VRAM (4-6GB VRAM)\e[0m"
+    echo -e "  ${Y}--novram\e[0m                      \e[38;5;27mMinimal VRAM mode (2-4GB VRAM)\e[0m"
+    echo -e "  ${Y}--cpu\e[0m                         \e[38;5;27mCPU only mode (slow, no GPU needed)\e[0m"
+    echo ""
+    echo -e "${Y}Attention (mutually exclusive):${N}"
+    echo -e "  ${Y}--use-split-cross-attention\e[0m   \e[38;5;27mSplit cross attention (saves VRAM)\e[0m"
+    echo -e "  ${Y}--use-quad-cross-attention\e[0m    \e[38;5;27mSub-quadratic attention (recommended, balanced)\e[0m"
+    echo -e "  ${Y}--use-pytorch-cross-attention\e[0m \e[38;5;27mPyTorch 2.0 attention (fast, needs VRAM)\e[0m"
+    echo -e "  ${Y}--use-sage-attention\e[0m          \e[38;5;27mSage attention (experimental)\e[0m"
+    echo -e "  ${Y}--use-flash-attention\e[0m         \e[38;5;27mFlash attention (fastest, needs compatible GPU)\e[0m"
+    echo ""
+    echo -e "${Y}Precision - UNet (mutually exclusive):${N}"
+    echo -e "  ${Y}--fp16-unet\e[0m                   \e[38;5;27mFP16 diffusion model (faster, less VRAM)\e[0m"
+    echo -e "  ${Y}--bf16-unet\e[0m                   \e[38;5;27mBF16 diffusion model (better quality)\e[0m"
+    echo -e "  ${Y}--fp8_e4m3fn-unet\e[0m             \e[38;5;27mFP8 E4M3FN weights (experimental, saves VRAM)\e[0m"
+    echo -e "  ${Y}--fp8_e5m2-unet\e[0m               \e[38;5;27mFP8 E5M2 weights (experimental)\e[0m"
+    echo ""
+    echo -e "${Y}Precision - VAE (mutually exclusive):${N}"
+    echo -e "  ${Y}--fp16-vae\e[0m                    \e[38;5;27mFP16 VAE (faster, may cause black images)\e[0m"
+    echo -e "  ${Y}--fp32-vae\e[0m                    \e[38;5;27mFP32 VAE (full precision, default)\e[0m"
+    echo -e "  ${Y}--bf16-vae\e[0m                    \e[38;5;27mBF16 VAE (balanced)\e[0m"
+    echo -e "  ${Y}--cpu-vae\e[0m                     \e[38;5;27mRun VAE on CPU (saves VRAM)\e[0m"
+    echo ""
+    echo -e "${Y}Precision - Text Encoder (mutually exclusive):${N}"
+    echo -e "  ${Y}--fp8_e4m3fn-text-enc\e[0m         \e[38;5;27mFP8 E4M3FN text encoder\e[0m"
+    echo -e "  ${Y}--fp8_e5m2-text-enc\e[0m           \e[38;5;27mFP8 E5M2 text encoder\e[0m"
+    echo -e "  ${Y}--fp16-text-enc\e[0m               \e[38;5;27mFP16 text encoder\e[0m"
+    echo ""
+    echo -e "${Y}Memory Management:${N}"
+    echo -e "  ${Y}--cuda-malloc\e[0m                 \e[38;5;27mEnable cudaMallocAsync (better memory handling)\e[0m"
+    echo -e "  ${Y}--disable-smart-memory\e[0m        \e[38;5;27mAggressive RAM offload (saves VRAM)\e[0m"
+    echo -e "  ${Y}--reserve-vram 2\e[0m              \e[38;5;27mReserve VRAM in GB for OS/other apps\e[0m"
+    echo ""
+    echo -e "${Y}Cache (mutually exclusive):${N}"
+    echo -e "  ${Y}--cache-classic\e[0m               \e[38;5;27mAggressive caching (faster repeated gens)\e[0m"
+    echo -e "  ${Y}--cache-lru 10\e[0m                \e[38;5;27mLRU cache with N results\e[0m"
+    echo ""
+    echo -e "${Y}Other Options:${N}"
+    echo -e "  ${Y}--preview-method auto\e[0m         \e[38;5;27mPreview method: auto/latent2rgb/taesd/none\e[0m"
+    echo -e "  ${Y}--auto-launch\e[0m                 \e[38;5;27mOpen browser automatically\e[0m"
+    echo -e "  ${Y}--multi-user\e[0m                  \e[38;5;27mEnable per-user storage\e[0m"
+    echo -e "  ${Y}--verbose DEBUG\e[0m               \e[38;5;27mSet logging level (DEBUG/INFO/WARNING/ERROR)\e[0m"
+    echo ""
+    echo -e "${Y}Example:\e[0m \e[38;5;39m--listen 0.0.0.0 --port 6057 --highvram --fp16-vae --cuda-malloc\e[0m"
+    echo ""
+    echo -e "${Y}LINKS:${N}"
+    echo -e "  \e[38;5;39m🏠\e[0m \e[38;5;27mhttps://cloudwerx.dev\e[0m                              \e[38;5;39mHomepage & Blog\e[0m"
+    echo -e "  \e[38;5;39m📖\e[0m \e[38;5;27mhttps://comfyanonymous.github.io/ComfyUI_examples/\e[0m \e[38;5;39mOfficial Examples & Workflows\e[0m"
+    echo -e "  \e[38;5;39m📚\e[0m \e[38;5;27mhttps://docs.comfy.org\e[0m                             \e[38;5;39mOfficial Documentation\e[0m"
+    echo -e "  \e[38;5;39m🐙\e[0m \e[38;5;27mhttps://github.com/comfyanonymous/ComfyUI\e[0m          \e[38;5;39mComfyUI Source Code\e[0m"
+    echo -e "  \e[38;5;39m💻\e[0m \e[38;5;27mhttps://github.com/CLOUDWERX-DEV/comfy_launch\e[0m      \e[38;5;39mThis Script (Report Issues)\e[0m"
+    echo -e "  \e[38;5;39m🤗\e[0m \e[38;5;27mhttps://huggingface.co/Comfy-Org\e[0m                   \e[38;5;39mOfficial Models & Resources\e[0m"
+    echo -e "  \e[38;5;39m🎨\e[0m \e[38;5;27mhttps://civitai.com\e[0m                                \e[38;5;39mCommunity Models & LoRAs\e[0m"
+    echo ""
+    echo -e "${Y}SUPPORT:${N}"
+    echo -e "  \e[38;5;39m☕\e[0m \e[38;5;27mhttps://buymeacoffee.com/cloudwerxl3\e[0m               \e[38;5;39mBuy Me A Coffee (Donate)\e[0m"
+    echo -e "  \e[38;5;39m💬\e[0m \e[38;5;27mhttps://discord.gg/EQSBU5aK\e[0m                        \e[38;5;39mDiscord Server (Help & Chat)\e[0m"
+    echo -e "  \e[38;5;39m📧\e[0m \e[38;5;27mmail@cloudwerx.dev\e[0m                                 \e[38;5;39mEmail Contact\e[0m"
+    echo ""
+    echo -e "${Y}TROUBLESHOOTING:${N}"
+    echo ""
+    echo -e "${Y}Q: Port already in use?${N}"
+    echo -e "  \e[38;5;39mA: Run\e[0m ${Y}comfy_launch.sh kill\e[0m \e[38;5;27mto stop the server\e[0m"
+    echo -e "     \e[38;5;39mOr manually:\e[0m ${Y}lsof -ti:PORT | xargs kill\e[0m"
+    echo ""
+    echo -e "${Y}Q: No venv found?${N}"
+    echo -e "  \e[38;5;39mA: Create one:\e[0m ${Y}cd ComfyUI && python -m venv venv\e[0m"
+    echo -e "     \e[38;5;39mThen install:\e[0m ${Y}source venv/bin/activate && pip install -r requirements.txt\e[0m"
+    echo ""
+    echo -e "${Y}Q: Server won't start?${N}"
+    echo -e "  \e[38;5;27mA: Check if Python/venv is correct\e[0m"
+    echo -e "     \e[38;5;39mVerify path exists:\e[0m ${Y}COMFY_PATH/ComfyUI\e[0m"
+    echo -e "     \e[38;5;39mCheck logs in:\e[0m ${Y}/tmp/comfy_launch_output.log\e[0m"
+    echo ""
+    echo -e "${Y}Q: Tunnel not working?${N}"
+    echo -e "  \e[38;5;27mA: Ensure server is running first (option 1)\e[0m"
+    echo -e "     \e[38;5;39mFor Cloudflare: Install cloudflared (auto-installed on apt systems)\e[0m"
+    echo -e "     \e[38;5;39mFor Pinggy: Requires ssh (usually pre-installed)\e[0m"
+    echo ""
+    echo -e "${Y}Q: Browser not opening?${N}"
+    echo -e "  \e[38;5;27mA: Check Settings menu (option S)\e[0m"
+    echo -e "     \e[38;5;39mVerify browser command is correct\e[0m"
+    echo -e "     \e[38;5;39mToggle auto-open settings if needed\e[0m"
+    echo ""
+    echo -e "${Y}Q: Custom node won't update?${N}"
+    echo -e "  \e[38;5;27mA: Node might have local changes\e[0m"
+    echo -e "     \e[38;5;39mGo to node folder and run:\e[0m ${Y}git status\e[0m"
+    echo -e "     \e[38;5;39mReset if needed:\e[0m ${Y}git reset --hard && git pull\e[0m"
+    echo ""
+    echo -e "${Y}Q: How to change port?${N}"
+    echo -e "  \e[38;5;27mA: Edit Launch Args (option 5)\e[0m"
+    echo -e "     \e[38;5;39mAdd or modify:\e[0m ${Y}--port YOUR_PORT\e[0m"
+    echo ""
+    echo -e "${Y}Q: Out of VRAM errors?${N}"
+    echo -e "  \e[38;5;27mA: Edit Launch Args (option 5)\e[0m"
+    echo -e "     \e[38;5;39mTry:\e[0m ${Y}--lowvram\e[0m \e[38;5;39mor\e[0m ${Y}--novram\e[0m \e[38;5;39mor\e[0m ${Y}--cpu\e[0m"
+    echo ""
+    echo -e "\e[38;5;27m────────────────────────────────────────────────────────────────────────────────────\e[0m"
+    echo ""
+    read -p "Press Enter to return to menu..."
 }
 
 show_menu() {
@@ -1295,7 +1452,7 @@ show_menu() {
     rbox_top
     
     # Path with wrapping
-    echo -e " ${B}📁${N} \e[38;5;39mPath:${N}"
+    echo -e " ${B}📁${N} \e\e[38;5;39mPath:${N}"
     if [[ -z "$COMFY_PATH" ]] || ! validate_setup; then
         echo -e "   ${R}⚠  NO VALID COMFYUI PATH DETECTED${N}"
     else
@@ -1314,18 +1471,18 @@ show_menu() {
     if [[ -n "$COMFY_PATH" ]] && validate_setup; then
         is_running && status="${G}🖥 RUNNING (PID: $(get_pid))${N}"
     fi
-    echo -e " ${G}⚙${N}  \e[38;5;39mStatus:${N}"
+    echo -e " ${G}⚙${N}  \e\e[38;5;39mStatus:${N}"
     echo -e "   $status"
     
     # Args with wrapping
-    echo -e " ${Y}⚡${N} \e[38;5;39mArgs:${N}"
+    echo -e " ${Y}⚡${N} \e\e[38;5;39mArgs:${N}"
     echo "$LAUNCH_ARGS" | fold -s -w 75 | while IFS= read -r line; do
         echo -e "   ${G}$line${N}"
     done
     
     # Venv with wrapping
     if [[ -n "$VENV_PATH" ]]; then
-        echo -e " ${P}🐍${N} \e[38;5;39mVenv:${N}"
+        echo -e " ${P}🐍${N} \e\e[38;5;39mVenv:${N}"
         echo "$VENV_PATH" | fold -s -w 75 | while IFS= read -r line; do
             echo -e "   ${P}$line${N}"
         done
@@ -1351,7 +1508,7 @@ show_menu() {
     echo -e "\e[38;5;27m<$(printf '─%.0s' {1..84})>${N}"
     echo ""
     
-    echo -ne "\e[38;5;39m➜\e[0m \e[38;5;39mSelect option:\e[0m "
+    echo -ne "\e\e[38;5;39m➜\e\e[0m \e\e[38;5;39mSelect option:\e\e[0m "
 }
 
 # CLI argument handling
@@ -1382,6 +1539,7 @@ if [[ $# -gt 0 ]]; then
             kill_server
             ;;
         tunnel)
+            validate_setup || { echo -e "${R}✗ Invalid setup${N}"; exit 1; }
             is_running || { echo -e "${R}✗ Start server first${N}"; exit 1; }
             case "${2:-cf}" in
                 cf|cloudflare) tunnel_cloudflare ;;
@@ -1398,6 +1556,9 @@ if [[ $# -gt 0 ]]; then
             ;;
         venv)
             [[ -n "$2" ]] && VENV_PATH="$2" && save_config && echo -e "${G}✓ Venv set${N}" || set_venv
+            ;;
+        settings)
+            show_settings
             ;;
         help|-h|--help)
             show_help

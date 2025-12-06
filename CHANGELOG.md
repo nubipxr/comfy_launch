@@ -5,6 +5,17 @@ All notable changes to ComfyUI Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.1] - 2025-12-06
+
+### Changed
+- Help menu completely redesigned with full color support
+- ASCII header in help menu now matches main menu colors (magenta/purple)
+- Section headers changed to yellow for better visibility
+- Body text changed to dark blue for improved readability
+- Commands and code snippets highlighted in yellow
+- Converted heredoc to echo statements for proper color rendering
+- Removed teal colors, using aqua and dark blue palette
+
 ## [1.5.0] - 2025-12-06
 
 ### Added
