@@ -506,7 +506,7 @@ MIT License - See [LICENSE](LICENSE) file for details.
 
 <div align="center">
 
-**⚡CLOUDWERX LAB̷» Digital Food for the Analog Soul**
+**⚡CLOUDWERX LAB̷ » Digital Food for the Analog Soul**
 
 [cloudwerx.dev](https://cloudwerx.dev) | [GitHub](https://github.com/CLOUDWERX-DEV) | [Discord](https://discord.gg/EQSBU5aK)
 
