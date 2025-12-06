@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# ComfyUI Launcher v1.1.7
+# ComfyUI Launcher v1.1.8
 # https://cloudwerx.dev | https://github.com/CLOUDWERX-DEV/comfy_launch
 
 set -o pipefail
@@ -332,21 +332,25 @@ launch_server() {
     local pid=$!
     local tunnel_pid=""
     local tunnel_url=""
+    local tunnel_status=""
     local server_url=""
     
     # Draw fixed footer at bottom
     draw_footer() {
         local rows=$(tput lines)
         local footer_lines=2
-        [[ -n "$tunnel_url" ]] && footer_lines=4
+        [[ -n "$tunnel_url" || -n "$tunnel_status" ]] && footer_lines=4
         
         # Position at footer area
         tput cup $((rows - footer_lines)) 0
         
-        # Draw tunnel section if active
+        # Draw tunnel section if active or waiting
         if [[ -n "$tunnel_url" ]]; then
             echo -e "${C}╭─[ ${M}☁️  CLOUDFLARE TUNNEL${C} ]────────────────────────────────────────────────────────────╴${N}"
             echo -e "${C}│${N} ${BC}$tunnel_url${N}"
+        elif [[ -n "$tunnel_status" ]]; then
+            echo -e "${C}╭─[ ${M}☁️  CLOUDFLARE TUNNEL${C} ]────────────────────────────────────────────────────────────╴${N}"
+            echo -e "${C}│${N} ${Y}$tunnel_status${N}"
         fi
         
         # Draw footer controls
@@ -361,25 +365,28 @@ launch_server() {
                 if [[ -z "$tunnel_pid" ]]; then
                     # Check if server is ready
                     if [[ -z "$server_url" ]]; then
-                        echo -e "\n${R}✗ Server not ready yet - wait for server to start first${N}"
+                        tunnel_status="⏳ Waiting for server to start..."
+                        footer_lines=4
+                        local rows=$(tput lines)
+                        tput csr $header_lines $((rows - footer_lines - 1))
+                        draw_footer
                         return 0
                     fi
                     
                     if ! command -v cloudflared &>/dev/null; then
-                        echo -e "\n${Y}⚠ cloudflared not installed - installing...${N}"
                         if command -v apt &>/dev/null; then
                             curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg | sudo gpg --yes --dearmor -o /usr/share/keyrings/cloudflare-main.gpg 2>&1 | grep -v "^$"
                             echo 'deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/ focal main' | sudo tee /etc/apt/sources.list.d/cloudflare-main.list >/dev/null
                             sudo apt update >/dev/null 2>&1 && sudo apt install -y cloudflared >/dev/null 2>&1
                         fi
                         if ! command -v cloudflared &>/dev/null; then
-                            echo -e "${R}✗ Installation failed${N}"
                             return 0
                         fi
-                        echo -e "${G}✓ Installed${N}"
                     fi
                     
-                    echo -e "\n${M}☁️  Digging tunnel, please wait...${N}"
+                    tunnel_status="⏳ Digging tunnel, please wait..."
+                    draw_footer
+                    
                     > /tmp/comfy_tunnel.log
                     cloudflared tunnel --url "$server_url" >> /tmp/comfy_tunnel.log 2>&1 &
                     tunnel_pid=$!
@@ -393,13 +400,16 @@ launch_server() {
                         ((attempts++))
                     done
                     
+                    tunnel_status=""
                     if [[ -n "$tunnel_url" ]]; then
-                        echo -e "${G}✓ Tunnel ready!${N}"
-                        draw_footer  # Update footer with tunnel URL
+                        draw_footer
                     else
-                        echo -e "${R}✗ Tunnel failed to start${N}"
+                        footer_lines=2
+                        local rows=$(tput lines)
+                        tput csr $header_lines $((rows - footer_lines - 1))
                         kill $tunnel_pid 2>/dev/null
                         tunnel_pid=""
+                        draw_footer
                     fi
                 fi
                 ;;
@@ -484,6 +494,11 @@ launch_server() {
             local port=$(echo "$detected_url" | grep -oP ':\K\d+')
             server_url="http://127.0.0.1:$port"  # For cloudflared
             local browser_url="$detected_url"     # For browser (can be 0.0.0.0)
+            
+            # Auto-start tunnel if user pressed T while waiting
+            if [[ -n "$tunnel_status" && -z "$tunnel_pid" ]]; then
+                handle_command "t"
+            fi
             
             if [[ -n "$browser_url" ]]; then
                 echo -e "${G}✓ Server ready!${N}"

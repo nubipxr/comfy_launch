@@ -5,6 +5,19 @@ All notable changes to ComfyUI Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.8] - 2025-12-06
+
+### Added
+- Tunnel status messages in footer during tunnel creation
+- "Waiting for server to start..." when T pressed before server ready
+- "Digging tunnel, please wait..." while establishing tunnel connection
+- Auto-start tunnel when server becomes ready if user already pressed T
+
+### Fixed
+- Tunnel status messages now display in footer instead of scrolling output
+- Footer properly expands to 4 lines for tunnel status/URL display
+- Tunnel creation is silent - no scrolling messages
+
 ## [1.1.7] - 2025-12-06
 
 ### Fixed
