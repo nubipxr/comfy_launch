@@ -5,6 +5,19 @@ All notable changes to ComfyUI Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2025-12-06
+
+### Fixed
+- Pinggy tunnel now works correctly from footer (P key)
+- Footer label correctly shows "PINGGY TUNNEL" or "CLOUDFLARE TUNNEL" based on tunnel type
+- Tunnel type tracking ensures correct tunnel starts when server becomes ready
+- Pinggy tunnel runs silently in background like Cloudflare
+- Pinggy URL displays with "(60min free)" note in footer
+
+### Changed
+- Tunnel type is now tracked separately from tunnel PID
+- Auto-start logic respects which tunnel type user requested
+
 ## [1.1.9] - 2025-12-06
 
 ### Added

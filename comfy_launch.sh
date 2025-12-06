@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# ComfyUI Launcher v1.1.9
+# ComfyUI Launcher v1.2.0
 # https://cloudwerx.dev | https://github.com/CLOUDWERX-DEV/comfy_launch
 
 set -o pipefail
@@ -333,6 +333,7 @@ launch_server() {
     local tunnel_pid=""
     local tunnel_url=""
     local tunnel_status=""
+    local tunnel_type=""  # Track which tunnel was requested
     local server_url=""
     
     # Draw fixed footer at bottom
@@ -344,14 +345,18 @@ launch_server() {
         # Position at footer area
         tput cup $((rows - footer_lines)) 0
         
+        # Determine tunnel type label
+        local tunnel_label="CLOUDFLARE TUNNEL"
+        [[ "$tunnel_type" == "pinggy" ]] && tunnel_label="PINGGY TUNNEL"
+        
         # Draw tunnel section if active or waiting
         if [[ -n "$tunnel_url" ]]; then
-            echo -e "${C}╭─[ ${M}☁️  CLOUDFLARE TUNNEL${C} ]────────────────────────────────────────────────────────╴${N}"
+            echo -e "${C}╭─[ ${M}☁️  $tunnel_label${C} ]────────────────────────────────────────────────────────╴${N}"
             echo -e "${C}│${N} ${Y}$tunnel_url${N}"
             echo -e "${C}├────────────────────────────────────────────────────────────────────────────────────╴${N}"
             echo -e "${C}│${N} ${M}T${N}=Tunnel ${C}P${N}=Pinggy ${Y}K${N}=Kill ${G}S${N}=Save ${BC}M${N}=Menu ${P}E${N}=Exit ${GR}| PID: ${R}$pid${N}"
         elif [[ -n "$tunnel_status" ]]; then
-            echo -e "${C}╭─[ ${M}☁️  CLOUDFLARE TUNNEL${C} ]────────────────────────────────────────────────────────╴${N}"
+            echo -e "${C}╭─[ ${M}☁️  $tunnel_label${C} ]────────────────────────────────────────────────────────╴${N}"
             echo -e "${C}│${N} ${Y}$tunnel_status${N}"
             echo -e "${C}├────────────────────────────────────────────────────────────────────────────────────╴${N}"
             echo -e "${C}│${N} ${M}T${N}=Tunnel ${C}P${N}=Pinggy ${Y}K${N}=Kill ${G}S${N}=Save ${BC}M${N}=Menu ${P}E${N}=Exit ${GR}| PID: ${R}$pid${N}"
@@ -366,6 +371,7 @@ launch_server() {
         case "$1" in
             t|T)
                 if [[ -z "$tunnel_pid" ]]; then
+                    tunnel_type="cloudflare"
                     # Check if server is ready
                     if [[ -z "$server_url" ]]; then
                         tunnel_status="⏳ Waiting for server to start..."
@@ -417,18 +423,50 @@ launch_server() {
                 fi
                 ;;
             p|P)
-                if [[ -z "$server_url" ]]; then
-                    return 0
+                if [[ -z "$tunnel_pid" ]]; then
+                    tunnel_type="pinggy"
+                    if [[ -z "$server_url" ]]; then
+                        tunnel_status="⏳ Waiting for server to start..."
+                        footer_lines=4
+                        local rows=$(tput lines)
+                        tput csr $header_lines $((rows - footer_lines - 1))
+                        draw_footer
+                        return 0
+                    fi
+                    
+                    if ! command -v ssh &>/dev/null; then
+                        return 0
+                    fi
+                    
+                    tunnel_status="⏳ Starting Pinggy tunnel..."
+                    draw_footer
+                    
+                    > /tmp/comfy_pinggy.log
+                    echo "yes" | ssh -p 443 -R0:localhost:${server_url##*:} qr@free.pinggy.io >> /tmp/comfy_pinggy.log 2>&1 &
+                    tunnel_pid=$!
+                    
+                    # Wait for tunnel URL
+                    local attempts=0
+                    while [[ $attempts -lt 20 ]]; do
+                        tunnel_url=$(grep -oP "https?://[a-z0-9-]+\.a\.free\.pinggy\.link" /tmp/comfy_pinggy.log 2>/dev/null | head -1)
+                        [[ -n "$tunnel_url" ]] && break
+                        sleep 0.5
+                        ((attempts++))
+                    done
+                    
+                    tunnel_status=""
+                    if [[ -n "$tunnel_url" ]]; then
+                        tunnel_url="$tunnel_url ${GR}(60min free)${N}"
+                        draw_footer
+                    else
+                        footer_lines=2
+                        local rows=$(tput lines)
+                        tput csr $header_lines $((rows - footer_lines - 1))
+                        kill $tunnel_pid 2>/dev/null
+                        tunnel_pid=""
+                        draw_footer
+                    fi
                 fi
-                
-                if ! command -v ssh &>/dev/null; then
-                    return 0
-                fi
-                
-                local rows=$(tput lines)
-                tput cup $((rows - footer_lines - 2)) 0
-                echo -e "${C}🌐 Starting Pinggy tunnel (60min free)...${N}"
-                echo "yes" | ssh -p 443 -R0:localhost:${server_url##*:} qr@free.pinggy.io
                 ;;
             k|K)
                 local rows=$(tput lines)
@@ -520,9 +558,13 @@ launch_server() {
             server_url="http://127.0.0.1:$port"  # For cloudflared
             local browser_url="$detected_url"     # For browser (can be 0.0.0.0)
             
-            # Auto-start tunnel if user pressed T while waiting
+            # Auto-start tunnel if user pressed T or P while waiting
             if [[ -n "$tunnel_status" && -z "$tunnel_pid" ]]; then
-                handle_command "t"
+                if [[ "$tunnel_type" == "pinggy" ]]; then
+                    handle_command "p"
+                else
+                    handle_command "t"
+                fi
             fi
             
             if [[ -n "$browser_url" ]]; then
