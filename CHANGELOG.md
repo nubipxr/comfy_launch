@@ -5,6 +5,31 @@ All notable changes to ComfyUI Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2025-12-06
+
+### Added
+- New compact ASCII header design
+- Blue gradient color theme throughout UI
+- GitHub repository link in header
+- Comprehensive node details display (version, publisher, description, icon, etc.)
+- Icon rendering support (Kitty terminal inline images, chafa/jp2a ASCII art)
+- Proper TOML parsing for all pyproject.toml fields
+- Menu icons for all options
+
+### Changed
+- Complete UI redesign with blue gradient theme
+- Menu boxes now use gradient borders
+- All prompts and labels use blue color scheme
+- Custom nodes manager shows full node information
+- Node details display at top with icon rendering
+- Improved prompt text in custom nodes menu
+- Path, Status, Args, and Venv now display with proper wrapping
+
+### Fixed
+- Description parsing handles escaped quotes and multi-line content
+- All TOML fields parse correctly without breaking on special characters
+- Box borders properly closed with corner characters
+
 ## [1.2.0] - 2025-12-06
 
 ### Fixed

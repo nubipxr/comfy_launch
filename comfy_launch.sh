@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# ComfyUI Launcher v1.2.0
+# ComfyUI Launcher v1.3.0
 # https://cloudwerx.dev | https://github.com/CLOUDWERX-DEV/comfy_launch
 
 set -o pipefail
@@ -36,44 +36,35 @@ LAUNCH_ARGS="$LAUNCH_ARGS"
 EOF
 }
 
-# Rounded box drawing
+# Rounded box drawing with gradient
 rbox_top() {
-    echo -e "${C}╭$(printf '─%.0s' {1..84})╴${N}"
+    echo -e "\e[38;5;33m╭$(printf '─%.0s' {1..84})\e[38;5;27m╮${N}"
 }
 
 rbox_line() {
     local text="$1"
-    echo -e "${C}│${N} $text"
+    echo -e "\e[38;5;33m│${N} $text"
 }
 
 rbox_bottom() {
-    echo -e "${C}╰$(printf '─%.0s' {1..84})╴${N}"
+    echo -e "\e[38;5;27m╰$(printf '─%.0s' {1..84})\e[38;5;21m╯${N}"
 }
 
 divider() {
-    echo -e "${GR}$(printf '─%.0s' {1..86})${N}"
+    echo -e "\e[38;5;27m$(printf '─%.0s' {1..86})\e[0m"
 }
-
 # Animated ASCII header
 show_header() {
     clear
-    echo -e "${M}  _______ _______ ___ ___ _______ ___ ___     ___     _______ ___ ___ ______  _______ ___ ___ _______ _______ ${N}"
+          echo -e "${M}       _____ _____ _____ _____ __ __    __    _____ _____ _____ _____ _____ ${N}"
     sleep 0.05
-    echo -e "${M} |   _   |   _   |   Y   |   _   |   Y   |   |   |   |   _   |   Y   |   _  \|   _   |   Y   |   _   |   _   \ ${N}"
+          echo -e "${M}      |     |     |     |   __|  |  |  |  |  |  _  |  |  |   | |     |  |  |${N}"
     sleep 0.05
-    echo -e "${P} |.  1___|.  |   |.      |.  1___|   1   |   |.  |   |.  1   |.  |   |.  |   |.  1___|.  1   |.  1___|.  l   /${N}"
+          echo -e "${P}      |   --|  |  | | | |   __|_   _|  |  |__|     |  |  | | | |   --|     |${N}"
     sleep 0.05
-    echo -e "${P} |.  |___|.  |   |. \_/  |.  __)  \_   _/    |.  |___|.  _   |.  |   |.  |   |.  |___|.  _   |.  __)_|.  _   1${N}"
+          echo -e "${P}      |_____|_____|_|_|_|__|    |_|    |_____|__|__|_____|_|___|_____|__|__|${N}"
     sleep 0.05
-    echo -e "${C} |:  1   |:  1   |:  |   |:  |     |:  |     |:  1   |:  |   |:  1   |:  |   |:  1   |:  |   |:  1   |:  |   |${N}"
-    sleep 0.05
-    echo -e "${C} |::.. . |::.. . |::.|:. |::.|     |::.|     |::.. . |::.|:. |::.. . |::.|   |::.. . |::.|:. |::.. . |::.|:. |${N}"
-    sleep 0.05
-    echo -e "${BC} \`-------\`-------\`--- ---\`---'     \`---'     \`-------\`--- ---\`-------\`--- ---\`-------\`--- ---\`-------\`--- ---'${N}"
-    sleep 0.05
-    echo -e "${GR}                                                                   [ A BadAss Launcher Script For ComfyUI.. ]${N}"
-    echo ""
-    echo -e "  ${BG}⚡ C̷L̷O̷U̷D̷W̷E̷R̷X̷ ̷L̷A̷B̷${N} ${GR}»${N} ${BC}https://cloudwerx.dev${N} ${GR}|${N} ${P}Digital Food for the Analog Soul${N}"
+    echo -e "       \e[38;5;33mhttps://github.com/CLOUDWERX-DEV/comfy_launch\e[0m \e[38;5;21m»\e[38;5;39m https://cloudwerx.dev\e[0m"
     echo ""
 }
 
@@ -222,8 +213,8 @@ manage_custom_nodes() {
         echo -e "${Y}U.${N} ${W}Update ComfyUI${N}"
         echo -e "${R}0.${N} ${W}Back to Main Menu${N}"
         echo ""
-        echo -e "${GR}Enter number for options: [U]pdate | [T]oggle On/Off | [D]elete | [I]nstall Deps${N}"
-        echo -ne "${C}➜${N} ${W}Select option:${N} "
+        echo -e "\e[38;5;27mEnter a Node number for options:${N}"
+        echo -ne "\e[38;5;33m➜\e[0m${N} ${W}Select option:${N} "
         read -r choice
         
         case "$choice" in
@@ -248,10 +239,91 @@ manage_custom_nodes() {
                     local node_path="${nodes[$((choice-1))]}"
                     local name=$(basename "$node_path")
                     
+                    # Get node details from pyproject.toml
+                    local version="" desc="" repo_url="" publisher="" display_name="" icon="" project_name=""
+                    if [[ -f "$node_path/pyproject.toml" ]]; then
+                        # Create temp Python script to avoid shell escaping issues
+                        cat > /tmp/parse_toml_$$.py << 'PYEOF'
+import sys, re
+try:
+    with open(sys.argv[1], 'r') as f:
+        content = f.read()
+    
+    fields = {}
+    fields['name'] = re.search(r'^name\s*=\s*"([^"]+)"', content, re.M)
+    fields['version'] = re.search(r'^version\s*=\s*"([^"]+)"', content, re.M)
+    fields['desc'] = re.search(r'description\s*=\s*"((?:[^"\\]|\\.)*)"', content, re.DOTALL)
+    fields['repo'] = re.search(r'Repository\s*=\s*"([^"]+)"', content)
+    fields['pub'] = re.search(r'PublisherId\s*=\s*"([^"]+)"', content)
+    fields['disp'] = re.search(r'DisplayName\s*=\s*"([^"]+)"', content)
+    fields['icon'] = re.search(r'Icon\s*=\s*"([^"]+)"', content)
+    
+    for key in ['name', 'version', 'desc', 'repo', 'pub', 'disp', 'icon']:
+        if fields[key]:
+            val = fields[key].group(1)
+            if key == 'desc':
+                val = val.replace('\\n', ' ').replace('\\"', '"').strip()
+            print(val, end='\0')
+        else:
+            print('', end='\0')
+except:
+    for i in range(7): print('', end='\0')
+PYEOF
+                        local i=0
+                        while IFS= read -r -d '' field; do
+                            case $i in
+                                0) project_name="$field" ;;
+                                1) version="$field" ;;
+                                2) desc="$field" ;;
+                                3) repo_url="$field" ;;
+                                4) publisher="$field" ;;
+                                5) display_name="$field" ;;
+                                6) icon="$field" ;;
+                            esac
+                            ((i++))
+                        done < <(python3 /tmp/parse_toml_$$.py "$node_path/pyproject.toml" 2>/dev/null)
+                        rm -f /tmp/parse_toml_$$.py
+                    fi
+                    # Fallback to git remote if no repo in pyproject
+                    if [[ -z "$repo_url" && -d "$node_path/.git" ]]; then
+                        repo_url=$(cd "$node_path" && git remote get-url origin 2>/dev/null)
+                    fi
+                    
                     clear
                     show_header
                     echo -e "${W}MANAGE: ${Y}${name%.disabled}${N}"
                     divider
+                    echo ""
+                    
+                    # Display icon at the top if available
+                    if [[ -n "$icon" ]]; then
+                        if [[ "$icon" =~ ^https?:// ]]; then
+                            # Try to display image
+                            if command -v curl &>/dev/null; then
+                                local tmp_icon="/tmp/node_icon_$$.png"
+                                curl -s "$icon" -o "$tmp_icon" 2>/dev/null
+                                if [[ -f "$tmp_icon" ]]; then
+                                    if [[ "$TERM" == "xterm-kitty" ]]; then
+                                        kitty +kitten icat --align left --scale-up "$tmp_icon" 2>/dev/null
+                                    elif command -v chafa &>/dev/null; then
+                                        chafa -s 40x20 "$tmp_icon" 2>/dev/null
+                                    elif command -v jp2a &>/dev/null; then
+                                        jp2a --width=60 "$tmp_icon" 2>/dev/null
+                                    fi
+                                    rm -f "$tmp_icon"
+                                fi
+                            fi
+                            echo -e "  \e[38;5;33m🎨 Icon URL:\e[0m ${BC}$icon${N}"
+                            echo ""
+                        fi
+                    fi
+                    
+                    [[ -n "$display_name" ]] && echo -e "  \e[38;5;33m📛 Display Name:\e[0m ${W}$display_name${N}"
+                    [[ -n "$project_name" ]] && echo -e "  \e[38;5;33m📦 Project Name:\e[0m ${C}$project_name${N}"
+                    [[ -n "$version" ]] && echo -e "  \e[38;5;33m🔢 Version:\e[0m ${C}$version${N}"
+                    [[ -n "$publisher" ]] && echo -e "  \e[38;5;33m👤 Publisher:\e[0m ${M}$publisher${N}"
+                    [[ -n "$desc" ]] && echo -e "  \e[38;5;33m📝 Description:\e[0m ${GR}$desc${N}"
+                    [[ -n "$repo_url" ]] && echo -e "  \e[38;5;33m🔗 Repository:\e[0m ${BC}$repo_url${N}"
                     echo ""
                     echo -e "${G}U.${N} ${W}Update Node${N}"
                     echo -e "${C}T.${N} ${W}Toggle On/Off${N}"
@@ -259,7 +331,7 @@ manage_custom_nodes() {
                     echo -e "${R}D.${N} ${W}Delete Node${N}"
                     echo -e "${GR}0.${N} ${W}Back${N}"
                     echo ""
-                    echo -ne "${C}➜${N} ${W}Action:${N} "
+                    echo -ne "\e[38;5;33m➜\e[0m \e[38;5;27mAction:\e[0m "
                     read -r action
                     
                     case "$action" in
@@ -351,18 +423,18 @@ launch_server() {
         
         # Draw tunnel section if active or waiting
         if [[ -n "$tunnel_url" ]]; then
-            echo -e "${C}╭─[ ${M}☁️  $tunnel_label${C} ]────────────────────────────────────────────────────────╴${N}"
-            echo -e "${C}│${N} ${Y}$tunnel_url${N}"
-            echo -e "${C}├────────────────────────────────────────────────────────────────────────────────────╴${N}"
-            echo -e "${C}│${N} ${M}T${N}=Tunnel ${C}P${N}=Pinggy ${Y}K${N}=Kill ${G}S${N}=Save ${BC}M${N}=Menu ${P}E${N}=Exit ${GR}| PID: ${R}$pid${N}"
+            echo -e "\e[38;5;33m╭─[\e[0m \e[38;5;39m☁️  $tunnel_label\e[38;5;33m ]────────────────────────────────────────────────────────╴\e[0m"
+            echo -e "\e[38;5;33m│\e[0m ${Y}$tunnel_url${N}"
+            echo -e "\e[38;5;27m├────────────────────────────────────────────────────────────────────────────────────╴\e[0m"
+            echo -e "\e[38;5;27m│\e[0m \e[38;5;33mT\e[0m=Tunnel \e[38;5;33mP\e[0m=Pinggy ${Y}K${N}=Kill ${G}S${N}=Save \e[38;5;27mM\e[0m=Menu \e[38;5;21mE\e[0m=Exit \e[38;5;240m| PID: ${R}$pid${N}"
         elif [[ -n "$tunnel_status" ]]; then
-            echo -e "${C}╭─[ ${M}☁️  $tunnel_label${C} ]────────────────────────────────────────────────────────╴${N}"
-            echo -e "${C}│${N} ${Y}$tunnel_status${N}"
-            echo -e "${C}├────────────────────────────────────────────────────────────────────────────────────╴${N}"
-            echo -e "${C}│${N} ${M}T${N}=Tunnel ${C}P${N}=Pinggy ${Y}K${N}=Kill ${G}S${N}=Save ${BC}M${N}=Menu ${P}E${N}=Exit ${GR}| PID: ${R}$pid${N}"
+            echo -e "\e[38;5;33m╭─[\e[0m \e[38;5;39m☁️  $tunnel_label\e[38;5;33m ]────────────────────────────────────────────────────────╴\e[0m"
+            echo -e "\e[38;5;33m│\e[0m ${Y}$tunnel_status${N}"
+            echo -e "\e[38;5;27m├────────────────────────────────────────────────────────────────────────────────────╴\e[0m"
+            echo -e "\e[38;5;27m│\e[0m \e[38;5;33mT\e[0m=Tunnel \e[38;5;33mP\e[0m=Pinggy ${Y}K${N}=Kill ${G}S${N}=Save \e[38;5;27mM\e[0m=Menu \e[38;5;21mE\e[0m=Exit \e[38;5;240m| PID: ${R}$pid${N}"
         else
-            echo -e "${C}╭────────────────────────────────────────────────────────────────────────────────────╴${N}"
-            echo -e "${C}│${N} ${M}T${N}=Tunnel ${C}P${N}=Pinggy ${Y}K${N}=Kill ${G}S${N}=Save ${BC}M${N}=Menu ${P}E${N}=Exit ${GR}| PID: ${R}$pid${N}"
+            echo -e "\e[38;5;33m╭────────────────────────────────────────────────────────────────────────────────────╴\e[0m"
+            echo -e "\e[38;5;27m│\e[0m \e[38;5;33mT\e[0m=Tunnel \e[38;5;33mP\e[0m=Pinggy ${Y}K${N}=Kill ${G}S${N}=Save \e[38;5;27mM\e[0m=Menu \e[38;5;21mE\e[0m=Exit \e[38;5;240m| PID: ${R}$pid${N}"
         fi
     }
     
@@ -798,11 +870,16 @@ show_menu() {
     else
         local status="${R}⏹ STOPPED${N}"
         is_running && status="${G}🖥 RUNNING (PID: $(get_pid))${N}"
+        
         # Path with wrapping
-        rbox_line "${B}📁${N} ${W}Path:${N} ${C}$COMFY_PATH${N}"
+        echo -e "${C}│${N} ${B}📁${N} ${W}Path:${N}"
+        echo "$COMFY_PATH" | fold -s -w 75 | while IFS= read -r line; do
+            echo -e "${C}│${N}   ${C}$line${N}"
+        done
         
         # Status
-        rbox_line "${G}⚙${N}  ${W}Status:${N} $status"
+        echo -e "${C}│${N} ${G}⚙${N}  ${W}Status:${N}"
+        echo -e "${C}│${N}   $status"
         
         # Args with wrapping
         echo -e "${C}│${N} ${Y}⚡${N} ${W}Args:${N}"
@@ -822,22 +899,22 @@ show_menu() {
     echo ""
     
     rbox_top
-    rbox_line "${BG}1.${N} ${W}Launch ComfyUI${N} ${GR}(Ctrl+C to stop)${N}"
-    rbox_line "${Y}2.${N} ${W}Update ComfyUI${N}"
-    rbox_line "${BC}3.${N} ${W}Manage Custom Nodes${N}"
-    rbox_line "${R}4.${N} ${W}Kill Server${N} ${GR}(if running)${N}"
-    rbox_line "${C}5.${N} ${W}Edit Launch Args${N}"
+    rbox_line "${BG}1.${N} ${W}🚀 Launch ComfyUI${N} ${GR}(Ctrl+C to stop)${N}"
+    rbox_line "${Y}2.${N} ${W}🔄 Update ComfyUI${N}"
+    rbox_line "${BC}3.${N} ${W}📦 Manage Custom Nodes${N}"
+    rbox_line "${R}4.${N} ${W}⏹  Kill Server${N} ${GR}(if running)${N}"
+    rbox_line "${C}5.${N} ${W}✏️  Edit Launch Args${N}"
     rbox_line "${M}6.${N} ${W}☁️  Cloudflare Tunnel${N}"
     rbox_line "${C}7.${N} ${W}🌐 Pinggy Tunnel${N} ${GR}(60min free)${N}"
-    rbox_line "${B}8.${N} ${W}Open Folder${N}"
-    rbox_line "${B}9.${N} ${W}Set ComfyUI Path${N}"
-    rbox_line "${P}V.${N} ${W}Set Venv Path${N} ${GR}(Python virtual environment)${N}"
-    rbox_line "${W}H.${N} ${W}Help & Links${N}"
-    rbox_line "${R}0.${N} ${W}Exit${N}"
+    rbox_line "${B}8.${N} ${W}📁 Open Folder${N}"
+    rbox_line "${B}9.${N} ${W}⚙️  Set ComfyUI Path${N}"
+    rbox_line "${P}V.${N} ${W}🐍 Set Venv Path${N} ${GR}(Python virtual environment)${N}"
+    rbox_line "${W}H.${N} ${W}❓ Help & Links${N}"
+    rbox_line "${R}0.${N} ${W}👋 Exit${N}"
     rbox_bottom
     echo ""
     
-    echo -ne "${BC}➜${N} ${W}Select option:${N} "
+    echo -ne "\e[38;5;33m➜\e[0m \e[38;5;27mSelect option:\e[0m "
 }
 
 # CLI argument handling
