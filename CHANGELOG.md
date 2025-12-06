@@ -5,6 +5,36 @@ All notable changes to ComfyUI Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2025-12-06
+
+### Added
+- Comprehensive Settings menu with system configuration options
+- Browser selection setting (default: google-chrome)
+- File manager selection setting (nemo/dolphin/nautilus)
+- Auto-open browser toggle for server and tunnel startup
+- System information display (GPU, CPU, hostname, IP, RAM)
+- ComfyUI statistics (custom nodes count, Python version, venv info)
+- New main menu option to open ComfyUI output folder
+- Enhanced tunnel interface with interactive footer
+- Real-time tunnel log display with scrolling output
+- Tunnel management options (New, Save logs, Menu, Quit)
+- Server check before starting tunnels
+
+### Changed
+- Tunnel functions completely rewritten with interactive UI
+- Tunnels now use port from launch args or default 8188
+- Menu box borders changed to dark blue for better contrast
+- Server launch screen shows header immediately without waiting message
+- Tunnel screens show header immediately without waiting message
+- Help menu enhanced with detailed information about venv, paths, and tunnels
+- Custom nodes menu "Select option:" text changed to aqua blue
+- Removed path issues troubleshooting (auto-handled now)
+
+### Fixed
+- Tunnel output now displays in real-time with line buffering
+- Tunnels properly killed when returning to menu or quitting
+- Browser opens to correct URL based on settings
+
 ## [1.4.0] - 2025-12-06
 
 ### Added

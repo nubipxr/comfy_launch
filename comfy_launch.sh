@@ -615,12 +615,13 @@ launch_server() {
     }
     trap cleanup_server INT TERM EXIT
     
-    echo -e "${Y}⏳ Waiting for server to start...${N}\n"
+    # Show header at top
+    show_header
     
     # Set up scroll region (leave space for footer)
     local rows=$(tput lines)
     local footer_lines=2
-    local header_lines=7  # Lines used by launch header + waiting message
+    local header_lines=7  # Lines used by header
     tput csr $header_lines $((rows - footer_lines - 1))  # Scroll between header and footer
     tput cup $header_lines 0  # Move cursor to start of scroll region
     
@@ -704,11 +705,18 @@ launch_server() {
 
 tunnel_cloudflare() {
     local port=$(get_port_from_args)
+    
+    # Check if server is running
+    if ! is_running; then
+        echo -e "${R}✗ Server not running. Start server first (option 1)${N}"
+        sleep 2
+        return 1
+    fi
+    
     if ! command -v cloudflared &>/dev/null; then
         echo -e "${Y}⚠ cloudflared not installed${N}"
         echo -e "${W}Installing cloudflared...${N}\n"
         
-        # Detect package manager and install
         if command -v apt &>/dev/null; then
             curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg | sudo gpg --yes --dearmor -o /usr/share/keyrings/cloudflare-main.gpg
             echo 'deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/ focal main' | sudo tee /etc/apt/sources.list.d/cloudflare-main.list
@@ -723,25 +731,200 @@ tunnel_cloudflare() {
             return 1
         fi
         
-        if command -v cloudflared &>/dev/null; then
-            echo -e "${G}✓ cloudflared installed successfully${N}\n"
-        else
+        if ! command -v cloudflared &>/dev/null; then
             echo -e "${R}✗ Installation failed${N}"
             return 1
         fi
     fi
     
-    echo -e "${M}☁️  Starting Cloudflare tunnel...${N}\n"
-    cloudflared tunnel --url "http://localhost:$port" 2>&1 | while IFS= read -r line; do
-        [[ "$line" =~ trycloudflare\.com ]] && echo -e "${BG}🌐 ${W}$line${N}" || echo -e "${GR}$line${N}"
+    clear
+    show_header
+    
+    > /tmp/comfy_tunnel.log
+    stdbuf -oL cloudflared tunnel --url "http://localhost:$port" >> /tmp/comfy_tunnel.log 2>&1 &
+    local tunnel_pid=$!
+    local tunnel_url=""
+    
+    # Draw footer
+    draw_tunnel_footer() {
+        local rows=$(tput lines)
+        local footer_lines=2
+        [[ -n "$tunnel_url" ]] && footer_lines=4
+        
+        tput cup $((rows - footer_lines)) 0
+        
+        if [[ -n "$tunnel_url" ]]; then
+            echo -e "\e[38;5;33m╭─[\e[0m \e[38;5;39m☁️  CLOUDFLARE TUNNEL\e[38;5;33m ]──────────────────────────────────────────────────────────>${N}"
+            echo -e "\e[38;5;33m│\e[0m ${G}$tunnel_url${N}"
+            echo -e "\e[38;5;27m├────────────────────────────────────────────────────────────────────────────────────>${N}"
+            echo -e "\e[38;5;27m│\e[0m \e[38;5;33mN\e[0m=New ${G}S${N}=Save \e[38;5;27mM\e[0m=Menu ${M}Q${N}=Quit \e[38;5;240m| PID: ${R}$tunnel_pid${N}"
+        else
+            echo -e "\e[38;5;33m╭────────────────────────────────────────────────────────────────────────────────────>${N}"
+            echo -e "\e[38;5;27m│\e[0m \e[38;5;33mN\e[0m=New ${G}S${N}=Save \e[38;5;27mM\e[0m=Menu ${M}Q${N}=Quit \e[38;5;240m| PID: ${R}$tunnel_pid${N}"
+        fi
+    }
+    
+    # Handle commands
+    handle_tunnel_command() {
+        case "$1" in
+            n|N)
+                kill $tunnel_pid 2>/dev/null
+                tunnel_cloudflare
+                return 1
+                ;;
+            s|S)
+                local logfile="tunnel_cf_$(date +%Y%m%d_%H%M%S).log"
+                cp /tmp/comfy_tunnel.log "$COMFY_PATH/$logfile"
+                local rows=$(tput lines)
+                tput cup $((rows - 3)) 0
+                echo -e "${G}✓ Logs saved: $COMFY_PATH/$logfile${N}"
+                ;;
+            m|M)
+                kill $tunnel_pid 2>/dev/null
+                return 1
+                ;;
+            q|Q)
+                kill $tunnel_pid 2>/dev/null
+                exit 0
+                ;;
+        esac
+    }
+    
+    trap "kill $tunnel_pid 2>/dev/null; exit 0" INT TERM EXIT
+    
+    local rows=$(tput lines)
+    local footer_lines=2
+    local header_lines=7
+    tput csr $header_lines $((rows - footer_lines - 1))
+    tput cup $header_lines 0
+    tput civis
+    
+    draw_tunnel_footer
+    
+    local last_line=0
+    while kill -0 "$tunnel_pid" 2>/dev/null; do
+        local current_lines=$(wc -l < /tmp/comfy_tunnel.log 2>/dev/null || echo 0)
+        if [ $current_lines -gt $last_line ]; then
+            tput cup $((rows - footer_lines - 1)) 0
+            tail -n +$((last_line + 1)) /tmp/comfy_tunnel.log
+            last_line=$current_lines
+            
+            if [[ -z "$tunnel_url" ]]; then
+                tunnel_url=$(grep -oP "https://[a-z0-9-]+\.trycloudflare\.com" /tmp/comfy_tunnel.log 2>/dev/null | head -1)
+                [[ -n "$tunnel_url" ]] && footer_lines=4 && tput csr $header_lines $((rows - footer_lines - 1))
+            fi
+            
+            draw_tunnel_footer
+        fi
+        
+        if read -rsn1 -t 0.2 key 2>/dev/null; then
+            handle_tunnel_command "$key" || break
+        fi
     done
+    
+    tput csr 0 $(tput lines)
+    tput cnorm
 }
 
 tunnel_pinggy() {
     local port=$(get_port_from_args)
-    command -v ssh &>/dev/null || { echo -e "${R}✗ SSH required${N}"; return 1; }
-    echo -e "${C}🌐 Starting Pinggy tunnel (60min free)...${N}\n"
-    echo "yes" | ssh -p 443 -R0:localhost:$port qr@free.pinggy.io
+    
+    if ! is_running; then
+        echo -e "${R}✗ Server not running. Start server first (option 1)${N}"
+        sleep 2
+        return 1
+    fi
+    
+    if ! command -v ssh &>/dev/null; then
+        echo -e "${R}✗ SSH required${N}"
+        return 1
+    fi
+    
+    clear
+    show_header
+    
+    > /tmp/comfy_pinggy.log
+    echo "yes" | stdbuf -oL ssh -p 443 -R0:localhost:$port qr@free.pinggy.io >> /tmp/comfy_pinggy.log 2>&1 &
+    local tunnel_pid=$!
+    local tunnel_url=""
+    
+    draw_tunnel_footer() {
+        local rows=$(tput lines)
+        local footer_lines=2
+        [[ -n "$tunnel_url" ]] && footer_lines=4
+        
+        tput cup $((rows - footer_lines)) 0
+        
+        if [[ -n "$tunnel_url" ]]; then
+            echo -e "\e[38;5;33m╭─[\e[0m \e[38;5;39m🌐 PINGGY TUNNEL\e[38;5;33m ]──────────────────────────────────────────────────────────>${N}"
+            echo -e "\e[38;5;33m│\e[0m ${G}$tunnel_url ${GR}(60min free)${N}"
+            echo -e "\e[38;5;27m├────────────────────────────────────────────────────────────────────────────────────>${N}"
+            echo -e "\e[38;5;27m│\e[0m \e[38;5;33mN\e[0m=New ${G}S${N}=Save \e[38;5;27mM\e[0m=Menu ${M}Q${N}=Quit \e[38;5;240m| PID: ${R}$tunnel_pid${N}"
+        else
+            echo -e "\e[38;5;33m╭────────────────────────────────────────────────────────────────────────────────────>${N}"
+            echo -e "\e[38;5;27m│\e[0m \e[38;5;33mN\e[0m=New ${G}S${N}=Save \e[38;5;27mM\e[0m=Menu ${M}Q${N}=Quit \e[38;5;240m| PID: ${R}$tunnel_pid${N}"
+        fi
+    }
+    
+    handle_tunnel_command() {
+        case "$1" in
+            n|N)
+                kill $tunnel_pid 2>/dev/null
+                tunnel_pinggy
+                return 1
+                ;;
+            s|S)
+                local logfile="tunnel_pinggy_$(date +%Y%m%d_%H%M%S).log"
+                cp /tmp/comfy_pinggy.log "$COMFY_PATH/$logfile"
+                local rows=$(tput lines)
+                tput cup $((rows - 3)) 0
+                echo -e "${G}✓ Logs saved: $COMFY_PATH/$logfile${N}"
+                ;;
+            m|M)
+                kill $tunnel_pid 2>/dev/null
+                return 1
+                ;;
+            q|Q)
+                kill $tunnel_pid 2>/dev/null
+                exit 0
+                ;;
+        esac
+    }
+    
+    trap "kill $tunnel_pid 2>/dev/null; exit 0" INT TERM EXIT
+    
+    local rows=$(tput lines)
+    local footer_lines=2
+    local header_lines=7
+    tput csr $header_lines $((rows - footer_lines - 1))
+    tput cup $header_lines 0
+    tput civis
+    
+    draw_tunnel_footer
+    
+    local last_line=0
+    while kill -0 "$tunnel_pid" 2>/dev/null; do
+        local current_lines=$(wc -l < /tmp/comfy_pinggy.log 2>/dev/null || echo 0)
+        if [ $current_lines -gt $last_line ]; then
+            tput cup $((rows - footer_lines - 1)) 0
+            tail -n +$((last_line + 1)) /tmp/comfy_pinggy.log
+            last_line=$current_lines
+            
+            if [[ -z "$tunnel_url" ]]; then
+                tunnel_url=$(grep -oP "https?://[a-z0-9-]+\.a\.free\.pinggy\.link" /tmp/comfy_pinggy.log 2>/dev/null | head -1)
+                [[ -n "$tunnel_url" ]] && footer_lines=4 && tput csr $header_lines $((rows - footer_lines - 1))
+            fi
+            
+            draw_tunnel_footer
+        fi
+        
+        if read -rsn1 -t 0.2 key 2>/dev/null; then
+            handle_tunnel_command "$key" || break
+        fi
+    done
+    
+    tput csr 0 $(tput lines)
+    tput cnorm
 }
 
 open_folder() {
@@ -886,7 +1069,6 @@ show_help() {
     echo -e "${W}TROUBLESHOOTING:${N}"
     echo -e "  ${R}✗${N} Port busy? \e[38;5;39mcomfy_launch.sh kill${N}"
     echo -e "  ${R}✗${N} No venv? \e[38;5;39mcd ComfyUI && python -m venv venv${N}"
-    echo -e "  ${R}✗${N} Path issues? ${Y}Set root folder containing ComfyUI/, not ComfyUI/ itself${N}"
     echo ""
     read -p "Press Enter to continue..."
 }
@@ -936,7 +1118,7 @@ show_menu() {
     rbox_bottom
     echo ""
     
-    rbox_top
+    echo -e "\e[38;5;27m<$(printf '─%.0s' {1..84})>${N}"
     rbox_line "${BG}1.${N} ${W}🚀 Launch ComfyUI${N} ${GR}(Ctrl+C to stop)${N}"
     rbox_line "${Y}2.${N} ${W}🔄 Update ComfyUI${N}"
     rbox_line "${BC}3.${N} ${W}📦 Manage Custom Nodes${N}"
@@ -949,7 +1131,7 @@ show_menu() {
     rbox_line "${P}V.${N} ${W}🐍 Set Venv Path${N} ${GR}(Python virtual environment)${N}"
     rbox_line "${W}H.${N} ${W}❓ Help & Links${N}"
     rbox_line "${R}0.${N} ${W}👋 Exit${N}"
-    rbox_bottom
+    echo -e "\e[38;5;27m<$(printf '─%.0s' {1..84})>${N}"
     echo ""
     
     echo -ne "\e[38;5;39m➜\e[0m \e[38;5;39mSelect option:\e[0m "
