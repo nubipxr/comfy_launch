@@ -5,6 +5,115 @@ All notable changes to ComfyUI Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.7] - 2025-12-06
+
+### Fixed
+- Footer now properly locked to bottom of terminal using scroll regions
+- Output scrolls only in designated area between header and footer
+- Footer no longer overwrites or scrolls with server output
+- Proper cursor positioning maintains clean output flow
+
+### Changed
+- Implemented terminal scroll region (tput csr) for fixed footer
+- Footer redraws after each output batch to stay visible
+- Scroll region resets on cleanup/exit
+
+## [1.1.6] - 2025-12-06
+
+### Added
+- Persistent footer with live controls while server runs
+- Footer shows: T=Tunnel, K=Kill, S=Save, M=Menu, E=Exit
+- Tunnel URL displays in footer when active
+- "Digging tunnel" message while waiting for tunnel
+- Auto-install cloudflared from footer (apt support)
+- Server URL detection for proper tunnel creation
+
+### Changed
+- Footer attempts to stay at bottom of terminal
+- Tunnel section shows in labeled box when active
+- Footer redraws after output to maintain visibility
+
+### Known Issues
+- Footer positioning needs refinement (scrolls with output)
+- Working on persistent bottom placement
+
+## [1.1.5] - 2025-12-06
+
+### Added
+- Auto-install cloudflared when starting Cloudflare tunnel
+- Multi-line wrapping for long paths, args, and venv paths
+- Menu (M) option in footer to return to menu without killing server
+- Exit (E) option in footer to exit script without killing server
+
+### Fixed
+- Footer key commands now working (T, K, S, M, E)
+- Port detection now uses actual port from launch args
+- Long launch args no longer break menu layout
+- Args display in red, venv path in purple for better visibility
+
+### Changed
+- Footer shows: T=Tunnel, K=Kill, S=Save, M=Menu, E=Exit
+- Text wraps properly with indentation instead of truncating
+- Status detection uses dynamic port from args
+
+## [1.1.4] - 2025-12-06
+
+### Added
+- Interactive footer while server is running
+- Live controls: T=Tunnel, K=Kill, S=Save Logs, Q=Quit
+- Footer stays at bottom of terminal
+- Real-time key input handling
+
+### Changed
+- Server output scrolls normally with footer overlay
+- Simplified terminal control for better compatibility
+
+## [1.1.3] - 2025-12-06
+
+### Added
+- Auto-launch browser when server is ready
+- Browser opens only after detecting "To see the GUI go to:" message
+- Readline editing for launch args (backspace, arrow keys work)
+- Pre-filled current args in editor for easy modification
+
+### Fixed
+- Status colors: STOPPED now red, RUNNING now green (was reversed)
+- Ctrl+C now properly kills server process (no orphaned processes)
+- Duplicate console output removed (was showing twice)
+- Browser launch detection now works correctly
+- Server cleanup with force kill if needed
+
+### Changed
+- Launch args editor now on separate line for better editing
+- Real-time output streaming without duplication
+- Improved trap handling for graceful shutdown
+
+## [1.1.2] - 2025-12-06
+
+### Added
+- **Advanced Custom Nodes Management**
+  - Toggle nodes on/off (disables without deleting)
+  - Install node dependencies from requirements.txt into venv
+  - Delete nodes with confirmation prompt
+  - Repository URL display for each node
+  - Visual status indicators (● enabled, ○ disabled)
+  - Per-node action menu (Update, Toggle, Install Deps, Delete)
+- Dimmed display for disabled nodes (gray text)
+- Repository links shown under each node description
+
+### Changed
+- Custom nodes manager completely overhauled with new UI
+- Disabled nodes shown with gray color and hollow circle indicator
+- Active nodes shown with green circle and yellow name
+- Update All now only updates active (enabled) nodes
+- Improved help text explaining available actions
+
+### Technical
+- Nodes disabled by renaming with `.disabled` suffix
+- ComfyUI automatically ignores `.disabled` folders
+- Dependencies installed directly into project venv
+- Safe delete with "DELETE" confirmation required
+
 ## [1.1.1] - 2025-12-06
 
 ### Added

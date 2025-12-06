@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# ComfyUI Launcher v1.1.0
+# ComfyUI Launcher v1.1.7
 # https://cloudwerx.dev | https://github.com/CLOUDWERX-DEV/comfy_launch
 
 set -o pipefail
@@ -19,6 +19,10 @@ COMFY_PATH=""
 VENV_PATH=""
 LAUNCH_ARGS="--listen 0.0.0.0 --port 6057 --use-quad-cross-attention --cuda-malloc"
 SERVER_PORT=6057
+
+get_port_from_args() {
+    echo "$LAUNCH_ARGS" | grep -oP '(?<=--port )\d+' || echo "8188"
+}
 
 load_config() {
     [[ -f "$CONFIG_FILE" ]] && source "$CONFIG_FILE" 2>/dev/null || true
@@ -112,21 +116,24 @@ show_exit() {
 }
 
 is_running() {
-    lsof -i :$SERVER_PORT -sTCP:LISTEN >/dev/null 2>&1
+    local port=$(get_port_from_args)
+    lsof -i :$port -sTCP:LISTEN >/dev/null 2>&1
 }
 
 get_pid() {
-    lsof -t -i :$SERVER_PORT -sTCP:LISTEN 2>/dev/null | head -1
+    local port=$(get_port_from_args)
+    lsof -t -i :$port -sTCP:LISTEN 2>/dev/null | head -1
 }
 
 kill_server() {
     local pid=$(get_pid)
+    local port=$(get_port_from_args)
     if [[ -n "$pid" ]]; then
         echo -e "${Y}⏹  Killing server (PID: $pid)...${N}"
         kill "$pid" 2>/dev/null && echo -e "${G}✓ Server stopped${N}" || echo -e "${R}✗ Failed${N}"
         sleep 1
     else
-        echo -e "${GR}No server running on port $SERVER_PORT${N}"
+        echo -e "${GR}No server running on port $port${N}"
     fi
 }
 
@@ -168,38 +175,54 @@ manage_custom_nodes() {
         local nodes=()
         local i=1
         
-        for node_dir in "$nodes_dir"/*; do
-            [[ ! -d "$node_dir" ]] && continue
-            local node_name=$(basename "$node_dir")
+        for node_path in "$nodes_dir"/* "$nodes_dir"/*.disabled; do
+            [[ ! -e "$node_path" ]] && continue
+            [[ ! -d "$node_path" ]] && continue
+            local node_name=$(basename "$node_path")
             [[ "$node_name" == "__pycache__" ]] && continue
+            [[ "$node_name" == "*.disabled" ]] && continue
+            
+            local is_disabled=false
+            [[ "$node_path" == *.disabled ]] && is_disabled=true
+            
             local display_name="$node_name"
             local version=""
             local desc=""
+            local repo_url=""
             
-            if [[ -f "$node_dir/pyproject.toml" ]]; then
-                display_name=$(grep -m1 '^DisplayName' "$node_dir/pyproject.toml" 2>/dev/null | cut -d'"' -f2 || echo "$node_name")
-                version=$(grep -m1 '^version' "$node_dir/pyproject.toml" 2>/dev/null | cut -d'"' -f2)
-                desc=$(grep -m1 '^description' "$node_dir/pyproject.toml" 2>/dev/null | cut -d'"' -f2 | sed 's/\\n/ /g' | sed 's/  */ /g')
+            if [[ -f "$node_path/pyproject.toml" ]]; then
+                display_name=$(grep -m1 '^DisplayName' "$node_path/pyproject.toml" 2>/dev/null | cut -d'"' -f2 || echo "${node_name%.disabled}")
+                version=$(grep -m1 '^version' "$node_path/pyproject.toml" 2>/dev/null | cut -d'"' -f2)
+                desc=$(grep -m1 '^description' "$node_path/pyproject.toml" 2>/dev/null | cut -d'"' -f2 | sed 's/\\n/ /g' | sed 's/  */ /g')
+                repo_url=$(grep -m1 '^Repository' "$node_path/pyproject.toml" 2>/dev/null | cut -d'"' -f2)
             fi
             
-            nodes+=("$node_dir")
+            nodes+=("$node_path")
             
-            echo -e "${BC}$i.${N} ${C}•${N} ${Y}$display_name${N} ${GR}${version:+v$version}${N}"
+            local status_icon="${G}●${N}"
+            local name_color="$Y"
+            if $is_disabled; then
+                status_icon="${GR}○${N}"
+                name_color="$GR"
+            fi
+            
+            echo -e "${BC}$i.${N} $status_icon ${name_color}$display_name${N} ${GR}${version:+v$version}${N}"
             if [[ -n "$desc" ]]; then
                 while IFS= read -r line; do
                     echo -e "     ${GR}$line${N}"
                 done < <(echo "$desc" | fold -s -w 77)
             fi
+            [[ -n "$repo_url" ]] && echo -e "     ${C}🔗 $repo_url${N}"
             echo ""
             ((i++))
         done
         
         divider
-        echo -e "${BG}A.${N} ${W}Update All Nodes${N}"
+        echo -e "${BG}A.${N} ${W}Update All Active Nodes${N}"
         echo -e "${Y}U.${N} ${W}Update ComfyUI${N}"
         echo -e "${R}0.${N} ${W}Back to Main Menu${N}"
         echo ""
-        echo -e "${GR}Enter a number (1-${#nodes[@]}) to update that node, or A/U/0${N}"
+        echo -e "${GR}Enter number for options: [U]pdate | [T]oggle On/Off | [D]elete | [I]nstall Deps${N}"
         echo -ne "${C}➜${N} ${W}Select option:${N} "
         read -r choice
         
@@ -207,10 +230,11 @@ manage_custom_nodes() {
             [0]) return ;;
             [Aa])
                 echo ""
-                for node_dir in "${nodes[@]}"; do
-                    local name=$(basename "$node_dir")
+                for node_path in "${nodes[@]}"; do
+                    [[ "$node_path" == *.disabled ]] && continue
+                    local name=$(basename "$node_path")
                     echo -e "${Y}Updating $name...${N}"
-                    cd "$node_dir" && git pull --ff-only 2>&1 | grep -E "(Already|Updating|error)" || echo -e "${GR}  No git repo${N}"
+                    cd "$node_path" && git pull --ff-only 2>&1 | grep -E "(Already|Updating|error)" || echo -e "${GR}  No git repo${N}"
                 done
                 echo ""
                 read -p "Press Enter to continue..."
@@ -221,13 +245,69 @@ manage_custom_nodes() {
                 ;;
             [1-9]*)
                 if [[ $choice -le ${#nodes[@]} ]]; then
-                    local node_dir="${nodes[$((choice-1))]}"
-                    local name=$(basename "$node_dir")
+                    local node_path="${nodes[$((choice-1))]}"
+                    local name=$(basename "$node_path")
+                    
+                    clear
+                    show_header
+                    echo -e "${W}MANAGE: ${Y}${name%.disabled}${N}"
+                    divider
                     echo ""
-                    echo -e "${Y}Updating $name...${N}"
-                    cd "$node_dir" && git pull --ff-only || echo -e "${R}✗ Update failed${N}"
+                    echo -e "${G}U.${N} ${W}Update Node${N}"
+                    echo -e "${C}T.${N} ${W}Toggle On/Off${N}"
+                    echo -e "${Y}I.${N} ${W}Install Dependencies (requirements.txt)${N}"
+                    echo -e "${R}D.${N} ${W}Delete Node${N}"
+                    echo -e "${GR}0.${N} ${W}Back${N}"
                     echo ""
-                    read -p "Press Enter to continue..."
+                    echo -ne "${C}➜${N} ${W}Action:${N} "
+                    read -r action
+                    
+                    case "$action" in
+                        [Uu])
+                            echo ""
+                            echo -e "${Y}Updating ${name%.disabled}...${N}"
+                            cd "$node_path" && git pull --ff-only || echo -e "${R}✗ Update failed${N}"
+                            echo ""
+                            read -p "Press Enter to continue..."
+                            ;;
+                        [Tt])
+                            if [[ "$node_path" == *.disabled ]]; then
+                                mv "$node_path" "${node_path%.disabled}"
+                                echo -e "${G}✓ Node enabled${N}"
+                            else
+                                mv "$node_path" "$node_path.disabled"
+                                echo -e "${Y}✓ Node disabled${N}"
+                            fi
+                            sleep 1
+                            ;;
+                        [Ii])
+                            if [[ -f "$node_path/requirements.txt" ]]; then
+                                echo ""
+                                echo -e "${Y}Installing dependencies...${N}"
+                                source "$VENV_PATH/bin/activate"
+                                pip install -r "$node_path/requirements.txt"
+                                echo ""
+                                read -p "Press Enter to continue..."
+                            else
+                                echo -e "${R}✗ No requirements.txt found${N}"
+                                sleep 2
+                            fi
+                            ;;
+                        [Dd])
+                            echo ""
+                            echo -e "${R}⚠ WARNING: This will permanently delete ${name%.disabled}${N}"
+                            echo -ne "${Y}Type 'DELETE' to confirm:${N} "
+                            read -r confirm
+                            if [[ "$confirm" == "DELETE" ]]; then
+                                rm -rf "$node_path"
+                                echo -e "${G}✓ Node deleted${N}"
+                                sleep 1
+                            else
+                                echo -e "${GR}Cancelled${N}"
+                                sleep 1
+                            fi
+                            ;;
+                    esac
                 fi
                 ;;
         esac
@@ -246,32 +326,235 @@ launch_server() {
     rbox_bottom
     echo ""
     
-    python main.py $LAUNCH_ARGS 2>&1 | tee /tmp/comfy_launch_error.log &
+    # Start server and capture output
+    > /tmp/comfy_launch_output.log
+    python main.py $LAUNCH_ARGS >> /tmp/comfy_launch_output.log 2>&1 &
     local pid=$!
-    sleep 3
+    local tunnel_pid=""
+    local tunnel_url=""
+    local server_url=""
     
-    if ! kill -0 "$pid" 2>/dev/null; then
-        echo -e "${R}✗ Failed to start${N}\n"
-        if grep -q "ImportError.*folder_paths" /tmp/comfy_launch_error.log 2>/dev/null; then
-            echo -e "${Y}⚠ Dependencies issue detected${N}"
-            echo -e "${W}Fix by reinstalling requirements:${N}"
-            echo -e "  ${C}cd $COMFY_PATH/ComfyUI${N}"
-            echo -e "  ${C}source $VENV_PATH/bin/activate${N}"
-            echo -e "  ${C}pip install -r requirements.txt${N}"
-            echo ""
-            read -p "Press Enter to continue..."
+    # Draw fixed footer at bottom
+    draw_footer() {
+        local rows=$(tput lines)
+        local footer_lines=2
+        [[ -n "$tunnel_url" ]] && footer_lines=4
+        
+        # Position at footer area
+        tput cup $((rows - footer_lines)) 0
+        
+        # Draw tunnel section if active
+        if [[ -n "$tunnel_url" ]]; then
+            echo -e "${C}╭─[ ${M}☁️  CLOUDFLARE TUNNEL${C} ]────────────────────────────────────────────────────────────╴${N}"
+            echo -e "${C}│${N} ${BC}$tunnel_url${N}"
         fi
+        
+        # Draw footer controls
+        echo -e "${C}╭────────────────────────────────────────────────────────────────────────────────────╴${N}"
+        echo -e "${C}│${N} ${M}T${N}=Tunnel ${Y}K${N}=Kill ${G}S${N}=Save ${BC}M${N}=Menu ${P}E${N}=Exit ${GR}| PID: $pid${N}"
+    }
+    
+    # Handle footer commands
+    handle_command() {
+        case "$1" in
+            t|T)
+                if [[ -z "$tunnel_pid" ]]; then
+                    # Check if server is ready
+                    if [[ -z "$server_url" ]]; then
+                        echo -e "\n${R}✗ Server not ready yet - wait for server to start first${N}"
+                        return 0
+                    fi
+                    
+                    if ! command -v cloudflared &>/dev/null; then
+                        echo -e "\n${Y}⚠ cloudflared not installed - installing...${N}"
+                        if command -v apt &>/dev/null; then
+                            curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg | sudo gpg --yes --dearmor -o /usr/share/keyrings/cloudflare-main.gpg 2>&1 | grep -v "^$"
+                            echo 'deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/ focal main' | sudo tee /etc/apt/sources.list.d/cloudflare-main.list >/dev/null
+                            sudo apt update >/dev/null 2>&1 && sudo apt install -y cloudflared >/dev/null 2>&1
+                        fi
+                        if ! command -v cloudflared &>/dev/null; then
+                            echo -e "${R}✗ Installation failed${N}"
+                            return 0
+                        fi
+                        echo -e "${G}✓ Installed${N}"
+                    fi
+                    
+                    echo -e "\n${M}☁️  Digging tunnel, please wait...${N}"
+                    > /tmp/comfy_tunnel.log
+                    cloudflared tunnel --url "$server_url" >> /tmp/comfy_tunnel.log 2>&1 &
+                    tunnel_pid=$!
+                    
+                    # Wait for tunnel URL
+                    local attempts=0
+                    while [[ $attempts -lt 20 ]]; do
+                        tunnel_url=$(grep -oP "https://[a-z0-9-]+\.trycloudflare\.com" /tmp/comfy_tunnel.log 2>/dev/null | head -1)
+                        [[ -n "$tunnel_url" ]] && break
+                        sleep 0.5
+                        ((attempts++))
+                    done
+                    
+                    if [[ -n "$tunnel_url" ]]; then
+                        echo -e "${G}✓ Tunnel ready!${N}"
+                        draw_footer  # Update footer with tunnel URL
+                    else
+                        echo -e "${R}✗ Tunnel failed to start${N}"
+                        kill $tunnel_pid 2>/dev/null
+                        tunnel_pid=""
+                    fi
+                fi
+                ;;
+            k|K)
+                echo -e "\n${Y}⏹  Stopping server...${N}"
+                kill $pid 2>/dev/null
+                [[ -n "$tunnel_pid" ]] && kill $tunnel_pid 2>/dev/null
+                sleep 1
+                [[ $(kill -0 $pid 2>/dev/null) ]] && kill -9 $pid 2>/dev/null
+                return 1
+                ;;
+            s|S)
+                local logfile="comfy_$(date +%Y%m%d_%H%M%S).log"
+                cp /tmp/comfy_launch_output.log "$COMFY_PATH/$logfile"
+                echo -e "\n${G}✓ Logs saved: $COMFY_PATH/$logfile${N}"
+                ;;
+            m|M)
+                echo -e "\n${C}↩  Returning to menu (server still running)...${N}"
+                if [[ -n "$tunnel_pid" ]]; then
+                    echo -e "${Y}⚠ Stopping tunnel...${N}"
+                    kill $tunnel_pid 2>/dev/null
+                    tunnel_pid=""
+                    tunnel_url=""
+                fi
+                return 1
+                ;;
+            e|E)
+                echo -e "\n${P}👋 Exiting (server still running)...${N}"
+                if [[ -n "$tunnel_pid" ]]; then
+                    echo -e "${Y}⚠ Stopping tunnel...${N}"
+                    kill $tunnel_pid 2>/dev/null
+                fi
+                exit 0
+                ;;
+        esac
+    }
+    
+    # Set up cleanup trap
+    cleanup_server() {
+        tput csr 0 $(tput lines)  # Reset scroll region
+        tput cnorm  # Show cursor
+        kill $pid 2>/dev/null
+        [[ -n "$tunnel_pid" ]] && kill $tunnel_pid 2>/dev/null
+        sleep 1
+        [[ $(kill -0 $pid 2>/dev/null) ]] && kill -9 $pid 2>/dev/null
+        exit 0
+    }
+    trap cleanup_server INT TERM EXIT
+    
+    echo -e "${Y}⏳ Waiting for server to start...${N}\n"
+    
+    # Set up scroll region (leave space for footer)
+    local rows=$(tput lines)
+    local footer_lines=2
+    local header_lines=7  # Lines used by launch header + waiting message
+    tput csr $header_lines $((rows - footer_lines - 1))  # Scroll between header and footer
+    tput cup $header_lines 0  # Move cursor to start of scroll region
+    
+    # Monitor output and handle input
+    local browser_launched=false
+    local last_line=0
+    tput civis  # Hide cursor
+    
+    # Draw initial footer
+    draw_footer
+    
+    while kill -0 "$pid" 2>/dev/null; do
+        # Show new output lines
+        local current_lines=$(wc -l < /tmp/comfy_launch_output.log 2>/dev/null || echo 0)
+        if [ $current_lines -gt $last_line ]; then
+            tput cup $((rows - footer_lines - 1)) 0  # Position at bottom of scroll region
+            tail -n +$((last_line + 1)) /tmp/comfy_launch_output.log
+            last_line=$current_lines
+            draw_footer  # Redraw footer after output
+        fi
+        
+        # Check for ready message and launch browser
+        if ! $browser_launched && grep -q "To see the GUI go to:" /tmp/comfy_launch_output.log 2>/dev/null; then
+            local detected_url=$(grep -oP "http://[0-9.:]+(?=\s|$)" /tmp/comfy_launch_output.log | head -1)
+            
+            # Extract port and create proper URLs
+            local port=$(echo "$detected_url" | grep -oP ':\K\d+')
+            server_url="http://127.0.0.1:$port"  # For cloudflared
+            local browser_url="$detected_url"     # For browser (can be 0.0.0.0)
+            
+            if [[ -n "$browser_url" ]]; then
+                echo -e "${G}✓ Server ready!${N}"
+                
+                if command -v google-chrome &>/dev/null; then
+                    google-chrome "$browser_url" &>/dev/null &
+                    echo -e "${G}🌐 Opened browser${N}"
+                elif command -v chromium &>/dev/null; then
+                    chromium "$browser_url" &>/dev/null &
+                    echo -e "${G}🌐 Opened browser${N}"
+                elif command -v firefox &>/dev/null; then
+                    firefox "$browser_url" &>/dev/null &
+                    echo -e "${G}🌐 Opened browser${N}"
+                fi
+                
+                browser_launched=true
+                draw_footer
+            fi
+        fi
+        
+        # Check for key input with timeout
+        if read -rsn1 -t 0.2 key 2>/dev/null; then
+            handle_command "$key" || break
+        fi
+    done
+    
+    tput csr 0 $(tput lines)  # Reset scroll region
+    tput cnorm  # Show cursor
+    
+    # Check if server failed
+    if grep -q "ImportError.*folder_paths" /tmp/comfy_launch_output.log 2>/dev/null; then
+        echo -e "\n${R}✗ Failed to start${N}\n"
+        echo -e "${Y}⚠ Dependencies issue detected${N}"
+        echo -e "${W}Fix by reinstalling requirements:${N}"
+        echo -e "  ${C}cd $COMFY_PATH/ComfyUI${N}"
+        echo -e "  ${C}source $VENV_PATH/bin/activate${N}"
+        echo -e "  ${C}pip install -r requirements.txt${N}"
+        echo ""
+        read -p "Press Enter to continue..."
         return 1
     fi
-    
-    echo -e "${G}✓ Server started (PID: $pid)${N}"
-    echo -e "${C}💡 Press Ctrl+C to stop${N}\n"
-    trap "echo -e '\n${Y}⏹  Stopping...${N}'; kill $pid 2>/dev/null; sleep 2; exit 0" INT
-    wait $pid
 }
 
 tunnel_cloudflare() {
-    command -v cloudflared &>/dev/null || { echo -e "${R}✗ cloudflared not installed${N}"; return 1; }
+    if ! command -v cloudflared &>/dev/null; then
+        echo -e "${Y}⚠ cloudflared not installed${N}"
+        echo -e "${W}Installing cloudflared...${N}\n"
+        
+        # Detect package manager and install
+        if command -v apt &>/dev/null; then
+            curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg | sudo gpg --yes --dearmor -o /usr/share/keyrings/cloudflare-main.gpg
+            echo 'deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/ focal main' | sudo tee /etc/apt/sources.list.d/cloudflare-main.list
+            sudo apt update && sudo apt install -y cloudflared
+        elif command -v dnf &>/dev/null; then
+            sudo dnf install -y cloudflared
+        elif command -v yum &>/dev/null; then
+            sudo yum install -y cloudflared
+        else
+            echo -e "${R}✗ Could not detect package manager${N}"
+            echo -e "${Y}Install manually: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/${N}"
+            return 1
+        fi
+        
+        if command -v cloudflared &>/dev/null; then
+            echo -e "${G}✓ cloudflared installed successfully${N}\n"
+        else
+            echo -e "${R}✗ Installation failed${N}"
+            return 1
+        fi
+    fi
+    
     echo -e "${M}☁️  Starting Cloudflare tunnel...${N}\n"
     cloudflared tunnel --url "http://localhost:$SERVER_PORT" 2>&1 | while IFS= read -r line; do
         [[ "$line" =~ trycloudflare\.com ]] && echo -e "${BG}🌐 ${W}$line${N}" || echo -e "${GR}$line${N}"
@@ -375,8 +658,8 @@ edit_launch_args() {
     
     echo -e "\n${Y}Format:${N} ${GR}Separate with spaces${N}"
     echo -e "${Y}Example:${N} ${C}--listen 0.0.0.0 --port 6057 --highvram --fp16-vae${N}\n"
-    echo -ne "${C}Enter new args (or Enter to keep):${N} "
-    read -r new_args
+    echo -e "${C}Enter new args (or Enter to keep):${N}"
+    read -e -i "$LAUNCH_ARGS" new_args
     [[ -n "$new_args" ]] && LAUNCH_ARGS="$new_args" && save_config && echo -e "${G}✓ Updated${N}"
     sleep 2
 }
@@ -431,12 +714,27 @@ show_menu() {
     if [[ -z "$COMFY_PATH" ]] || ! validate_setup; then
         rbox_line "${R}⚠  NO VALID COMFYUI PATH DETECTED${N}"
     else
-        local status="${G}⏹ STOPPED${N}"
-        is_running && status="${R}🖥 RUNNING (PID: $(get_pid))${N}"
+        local status="${R}⏹ STOPPED${N}"
+        is_running && status="${G}🖥 RUNNING (PID: $(get_pid))${N}"
+        # Path with wrapping
         rbox_line "${B}📁${N} ${W}Path:${N} ${C}$COMFY_PATH${N}"
+        
+        # Status
         rbox_line "${G}⚙${N}  ${W}Status:${N} $status"
-        rbox_line "${Y}⚡${N} ${W}Args:${N} ${GR}$LAUNCH_ARGS${N}"
-        [[ -n "$VENV_PATH" ]] && rbox_line "${P}🐍${N} ${W}Venv:${N} ${GR}$VENV_PATH${N}"
+        
+        # Args with wrapping
+        echo -e "${C}│${N} ${Y}⚡${N} ${W}Args:${N}"
+        echo "$LAUNCH_ARGS" | fold -s -w 75 | while IFS= read -r line; do
+            echo -e "${C}│${N}   ${R}$line${N}"
+        done
+        
+        # Venv with wrapping
+        if [[ -n "$VENV_PATH" ]]; then
+            echo -e "${C}│${N} ${P}🐍${N} ${W}Venv:${N}"
+            echo "$VENV_PATH" | fold -s -w 75 | while IFS= read -r line; do
+                echo -e "${C}│${N}   ${P}$line${N}"
+            done
+        fi
     fi
     rbox_bottom
     echo ""
